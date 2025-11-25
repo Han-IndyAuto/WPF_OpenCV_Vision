@@ -3,35 +3,27 @@
   "WorkspaceRootPath": "D:\\Project\\INDY\\IndyVision_OpenCV\\IndyVision\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|D:\\Project\\INDY\\IndyVision_OpenCV\\IndyVision\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|solutionrelative:mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|D:\\Project\\INDY\\IndyVision_OpenCV\\IndyVision\\algorithmparameters.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|solutionrelative:algorithmparameters.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|d:\\project\\indy\\indyvision_opencv\\indyvision\\readme.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}",
       "RelativeMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|solutionrelative:readme.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|d:\\project\\indy\\indyvision_opencv\\indyvision\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
-      "RelativeMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|solutionrelative:mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|d:\\project\\indy\\indyvision_opencv\\indyvision\\algorithmparameters.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|solutionrelative:algorithmparameters.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|d:\\project\\indy\\indyvision_opencv\\indyvision\\opencvservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|D:\\Project\\INDY\\IndyVision_OpenCV\\IndyVision\\opencvservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|solutionrelative:opencvservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|d:\\project\\indy\\indyvision_opencv\\indyvision\\mainviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|D:\\Project\\INDY\\IndyVision_OpenCV\\IndyVision\\mainviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|solutionrelative:mainviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|d:\\project\\indy\\indyvision_opencv\\indyvision\\app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
-      "RelativeMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|solutionrelative:app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|d:\\project\\indy\\indyvision_opencv\\indyvision\\app.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|solutionrelative:app.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|d:\\project\\indy\\indyvision_opencv\\indyvision\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|D:\\Project\\INDY\\IndyVision_OpenCV\\IndyVision\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{F8F038C3-70FB-4867-8093-2FF4167B153F}|IndyVision.csproj|solutionrelative:mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
@@ -42,7 +34,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 2,
+          "SelectedChildIndex": 6,
           "Children": [
             {
               "$type": "Bookmark",
@@ -54,51 +46,26 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
               "Title": "ReadMe.md",
               "DocumentMoniker": "D:\\Project\\INDY\\IndyVision_OpenCV\\IndyVision\\ReadMe.md",
               "RelativeDocumentMoniker": "ReadMe.md",
               "ToolTip": "D:\\Project\\INDY\\IndyVision_OpenCV\\IndyVision\\ReadMe.md",
               "RelativeToolTip": "ReadMe.md",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAOAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAABqAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
               "WhenOpened": "2025-11-25T04:04:02.078Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "App.xaml",
-              "DocumentMoniker": "D:\\Project\\INDY\\IndyVision_OpenCV\\IndyVision\\App.xaml",
-              "RelativeDocumentMoniker": "App.xaml",
-              "ToolTip": "D:\\Project\\INDY\\IndyVision_OpenCV\\IndyVision\\App.xaml",
-              "RelativeToolTip": "App.xaml",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
-              "WhenOpened": "2025-11-25T03:36:45.68Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "App.xaml.cs",
-              "DocumentMoniker": "D:\\Project\\INDY\\IndyVision_OpenCV\\IndyVision\\App.xaml.cs",
-              "RelativeDocumentMoniker": "App.xaml.cs",
-              "ToolTip": "D:\\Project\\INDY\\IndyVision_OpenCV\\IndyVision\\App.xaml.cs",
-              "RelativeToolTip": "App.xaml.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-25T03:36:43.355Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 1,
               "Title": "AlgorithmParameters.cs",
               "DocumentMoniker": "D:\\Project\\INDY\\IndyVision_OpenCV\\IndyVision\\AlgorithmParameters.cs",
               "RelativeDocumentMoniker": "AlgorithmParameters.cs",
               "ToolTip": "D:\\Project\\INDY\\IndyVision_OpenCV\\IndyVision\\AlgorithmParameters.cs",
               "RelativeToolTip": "AlgorithmParameters.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAABVAAAAAAAAAA==",
+              "ViewState": "AgIAAOoAAAAAAAAAAAA0wJEBAAAjAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-25T02:31:09.448Z",
               "EditorCaption": ""
@@ -111,7 +78,7 @@
               "RelativeDocumentMoniker": "MainViewModel.cs",
               "ToolTip": "D:\\Project\\INDY\\IndyVision_OpenCV\\IndyVision\\MainViewModel.cs",
               "RelativeToolTip": "MainViewModel.cs",
-              "ViewState": "AgIAAHwBAAAAAAAAAAAUwA8AAAAdAAAAAAAAAA==",
+              "ViewState": "AgIAALQAAAAAAAAAAAAIwMAAAAAIAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-25T02:30:21.878Z",
               "EditorCaption": ""
@@ -124,14 +91,14 @@
               "RelativeDocumentMoniker": "OpenCVService.cs",
               "ToolTip": "D:\\Project\\INDY\\IndyVision_OpenCV\\IndyVision\\OpenCVService.cs",
               "RelativeToolTip": "OpenCVService.cs",
-              "ViewState": "AgIAAD8AAAAAAAAAAAAUwOUAAAAzAAAAAAAAAA==",
+              "ViewState": "AgIAAPQBAAAAAAAAAAAkwP8BAAAvAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-25T02:18:00.742Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "MainWindow.xaml",
               "DocumentMoniker": "D:\\Project\\INDY\\IndyVision_OpenCV\\IndyVision\\MainWindow.xaml",
               "RelativeDocumentMoniker": "MainWindow.xaml",
@@ -143,13 +110,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 5,
               "Title": "MainWindow.xaml.cs",
               "DocumentMoniker": "D:\\Project\\INDY\\IndyVision_OpenCV\\IndyVision\\MainWindow.xaml.cs",
               "RelativeDocumentMoniker": "MainWindow.xaml.cs",
               "ToolTip": "D:\\Project\\INDY\\IndyVision_OpenCV\\IndyVision\\MainWindow.xaml.cs",
               "RelativeToolTip": "MainWindow.xaml.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAHQBAAAEAAAAAAAAAA==",
+              "ViewState": "AgIAAIMAAAAAAAAAAAAIwI8AAAAIAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-25T02:15:45.324Z",
               "EditorCaption": ""

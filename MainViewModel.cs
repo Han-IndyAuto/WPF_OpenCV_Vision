@@ -157,6 +157,7 @@ namespace IndyVision
                 "Morphology (모폴로지)",
                 "Edge Detection (엣지 검출)",
                 "Blob Analysis (블롭 분석)",
+                "TemplateMatching (TM)",
                 "Geometric Model Finder (GMF)" // 이름 유지, 내부 로직은 Template Matching
             };
 
@@ -220,6 +221,10 @@ namespace IndyVision
 
                 case "Geometric Model Finder (GMF)":
                     CurrentParameters = new GmfParams();
+                    break;
+
+                case "TemplateMatching (TM)":    // TemplateMatching (TM)
+                    CurrentParameters = new TemplateMatchParams();
                     break;
 
                 default:
@@ -300,7 +305,12 @@ namespace IndyVision
                         UpdateDisplay();
                     }
 
-                    AnalysisResult = "모델 이미지 로드됨. 속성을 조절하여 모델을 정의하세요.";
+                    else if(CurrentParameters is TemplateMatchParams tmParams)
+                    {
+                        _cvServices.PreviewGmfModel(tmParams);
+                    }
+
+                        AnalysisResult = "모델 이미지 로드됨. 속성을 조절하여 모델을 정의하세요.";
                 }
                 catch (Exception ex)
                 {
@@ -328,6 +338,23 @@ namespace IndyVision
                     AnalysisResult = "Train Error: " + ex.Message;
                 }
             }
+            else if (CurrentParameters is TemplateMatchParams tmParam)
+            {
+                try
+                {
+                    _cvServices.TrainGmfModel(tmParam);
+                    AnalysisResult = "모델 등록 완료! 이제 검사 이미지를 열고 '적용'을 누르세요";
+
+                    // 다시 검사 원본 이미지 보기로 전환.
+                    ShowOriginal = true;
+                    UpdateDisplay();
+                }
+                catch (Exception ex)
+                {
+                    AnalysisResult = "Train Error: " + ex.Message;
+                }
+            }
+
         }
 
 
@@ -369,11 +396,6 @@ namespace IndyVision
             // 일반 검사 로직 (기존과 동일)
             try
             {
-                // [중요] MilService에게 "이 알고리즘으로, 이 설정값(CurrentParameters)을 써서 처리해줘!"라고 명령합니다.
-                // 여기서 사용자가 슬라이더로 조정한 값들이 MilService로 넘어갑니다.
-                // 현재 설정된 파라미터(_currentParameters)를 넘겨줌
-                //_milService.ProcessImage(SelectedAlgorithm, CurrentParameters);   // 기존 코드
-
                 // [수정] ProcessImage가 결과를 반환하도록 변경하거나, 호출 후 결과를 받아옴
                 string result = _cvServices.ProcessImage(SelectedAlgorithm, CurrentParameters);
                 AnalysisResult = result;

@@ -370,8 +370,88 @@
             </StackPanel>
         </DataTemplate>
 
+        <DataTemplate DataType="{x:Type local:TemplateMatchParams}">
+            <StackPanel>
+                <TextBlock Text="Model Definition (모델 등록)" FontWeight="Bold" Margin="0,0,0,5"/>
+                <Button Content="Load Model Image (모델 불러오기)"
+                        Command="{Binding DataContext.LoadModelCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        Margin="0,0,0,10" Height="30"/>
+                
+                <TextBlock Text="Smoothness (엣지 부드러움)" Margin="0,0,0,5"/>
+                <TextBlock Text="(모델의 특징이 잘 보이도록 조절)" FontSize="10" Foreground="Gray"/>
+
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="40"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="Smoothness:" VerticalAlignment="Center"/>
+                    <Slider Grid.Column="1" Maximum="100" Minimum="0" Value="{Binding Smoothness}" 
+                            VerticalAlignment="Center" Margin="5,0"/>
+                    <TextBox Grid.Column="2" Text="{Binding Smoothness}" Margin="5,0,0,0" TextAlignment="Center"/>
+                </Grid>
+
+                <Button Content="Train Model (모델 등록 완료)"
+                        Command="{Binding DataContext.TrainModelCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        Background="LightGreen" FontWeight="Bold" Margin="0,0,0,20" Height="35" />
+
+                <Separator Margin="0,0,0,10"/>
+
+                <Grid Margin="0,0,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="40"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="Min Score:" VerticalAlignment="Center" ToolTip="Acceptance Level"/>
+                    <Slider Grid.Column="1" Maximum="100" Minimum="0" Value="{Binding MinScore}" Margin="5,0"/>
+                    <TextBox Grid.Column="2" Text="{Binding MinScore}" TextAlignment="Center"/>
+                </Grid>
+
+                <CheckBox Content="Find All(모두 찾기)" IsChecked="{Binding FindAllOccurrences}" Margin="0,5,0,2" FontWeight="Bold"/>
+                <Grid Margin="0,0,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="40"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="Max Count:" VerticalAlignment="Center" />
+                    <Slider Grid.Column="1" Maximum="500" Minimum="1" Value="{Binding MaxOccurrences}" Margin="5,0">
+                        <Slider.Style>
+                            <Style TargetType="Slider">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding FindAllOccurrences}" Value="True">
+                                        <Setter Property="IsEnabled" Value="False"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Slider.Style>
+                    </Slider>
+                    <TextBox Grid.Column="2" Text="{Binding MaxOccurrences}" TextAlignment="Center">
+                        <TextBox.Style>
+                            <Style TargetType="TextBox">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding FindAllOccurrences}" Value="True">
+                                        <Setter Property="IsEnabled" Value="False"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
+                </Grid>
+
+            </StackPanel>
+        </DataTemplate>
+        
+        
         <DataTemplate DataType="{x:Type local:AlgorithmParamsBase}">
-            <TextBlock Text="설정 가능한 속성이 없습니다." Foreground="Gray" FontStyle="Italic"/>
+            <TextBlock Text="설정 가능한 속성이 없습니다." 
+                       Foreground="Gray" 
+                       FontStyle="Italic"/>
         </DataTemplate>
     </Window.Resources>
 

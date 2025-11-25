@@ -305,7 +305,7 @@ namespace IndyVision
 
         // 4. 검색 개수 설정 (M_NUMBER)
         // [핵심] "모두 찾기" 체크박스용
-        private bool _findAllOccurrences = true;
+        private bool _findAllOccurrences = false;
         public bool FindAllOccurrences
         {
             get => _findAllOccurrences;
@@ -319,7 +319,7 @@ namespace IndyVision
         }
 
         // [추가] 검색 개수 (Number)
-        private int _maxOccurrences = 1000;
+        private int _maxOccurrences = 100;
         public int MaxOccurrences
         {
             get => _maxOccurrences;
@@ -398,4 +398,62 @@ namespace IndyVision
             }
         }
     }
+
+    public class TemplateMatchParams : AlgorithmParamsBase
+    {
+        private double _smoothness = 60;
+        public double Smoothness
+        {
+            get => _smoothness;
+            set
+            {
+                if (_smoothness == value) return;
+                _smoothness = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // 검색용 파라미터 (실행 단계)
+        // 최소 일치률 (0 ~ 100). 이 점수 이상인것만 찾는다.
+        private double _minScore = 65;
+        public double MinScore
+        {
+            get => _minScore;
+            set
+            {
+                if (_minScore == value) return;
+                _minScore = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // 검색 개수 설정 (M_NUMBER)
+        // [핵심] "모두 찾기" 체크박스용
+        private bool _findAllOccurrences = false;
+        public bool FindAllOccurrences
+        {
+            get => _findAllOccurrences;
+            set
+            {
+                if (_findAllOccurrences == value) return;
+
+                _findAllOccurrences = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // [추가] 검색 개수 (Number)
+        private int _maxOccurrences = 100;
+        public int MaxOccurrences
+        {
+            get => _maxOccurrences;
+            set
+            {
+                if (_maxOccurrences == value) return;
+                _maxOccurrences = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
 }

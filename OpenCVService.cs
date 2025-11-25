@@ -227,6 +227,91 @@ namespace IndyVision
                     }
                     break;
 
+                case "TemplateMatching (TM)":
+                    if(parameters is TemplateMatchParams tmParams)
+                    {
+                        if (IsModelDefinitionMode) return "모델 정의 모드입니다";
+                        if (_modelImage == null) return "모델이미지가 없습니다.";
+
+                        using (Mat result = new Mat())
+                        using (Mat graySrc = new Mat())
+                        using (Mat grayModel = new Mat())
+                        {
+                            Cv2.CvtColor(_srcImage, graySrc, ColorConversionCodes.BGR2GRAY);
+
+                            // 모델이 컬러라면 흑백 변환
+                            if (_modelImage.Channels() == 3)
+                                Cv2.CvtColor(_modelImage, grayModel, ColorConversionCodes.BGR2GRAY);
+                            else
+                                _modelImage.CopyTo(grayModel);
+
+                            // 매칭 (NCC Normed)
+                            Cv2.MatchTemplate(graySrc, grayModel, result, TemplateMatchModes.CCoeffNormed);
+
+                            // 2. 결과 임계값 처리 (MinScore)
+                            // OpenCV 결과는 0.0 ~ 1.0, GMF Params는 0 ~ 100
+                            double threshold = tmParams.MinScore / 100.0;
+
+                            // 결과를 컬러에 그리기 위해 복사
+                            _srcImage.CopyTo(_destImage);
+
+                            int foundCount = 0;
+
+                            // "모두 찾기" 로직 (임계값 넘는 모든 위치 찾기)
+                            while (true)
+                            {
+                                double minVal, maxVal;
+                                Point minLoc, maxLoc;
+                                Cv2.MinMaxLoc(result, out minVal, out maxVal, out minLoc, out maxLoc);
+
+                                // [종료 조건 1] 점수가 임계값보다 낮으면 종료
+                                if (maxVal < threshold)
+                                    break;
+
+                                // [종료 조건 2] 찾은 개수 제한
+                                foundCount++;
+                                if (!tmParams.FindAllOccurrences && foundCount > tmParams.MaxOccurrences)
+                                    break;
+
+                                // 3. 결과 그리기 (박스 표시)
+                                Cv2.Rectangle(_destImage, new Rect(maxLoc.X, maxLoc.Y, _modelImage.Width, _modelImage.Height), Scalar.Red, 2);
+                                Cv2.PutText(_destImage, $"{maxVal * 100:F1}%", new Point(maxLoc.X, maxLoc.Y - 5), HersheyFonts.HersheySimplex, 0.5, Scalar.Blue, 1);
+
+                                // 4. [핵심 수정] 중복 검출 방지 (Non-Maximum Suppression)
+                                //    찾은 위치(maxLoc)를 '중심'으로 하여 템플릿 크기만큼의 영역을 지웁니다.
+                                //    이전 코드: maxLoc 부터 시작 (오른쪽/아래만 지움 -> 왼쪽/위쪽 점수 남음 -> 무한루프)
+                                //    수정 코드: maxLoc 주변(좌우상하)을 모두 포함하도록 마스크 영역 설정
+
+                                // 마스킹할 영역의 좌상단 좌표 계산 (모델 크기의 절반만큼 뒤로 이동)
+                                int maskX = maxLoc.X - _modelImage.Width / 2;
+                                int maskY = maxLoc.Y - _modelImage.Height / 2;
+
+                                // 마스킹 영역 설정 (모델 크기만큼)
+                                Rect maskRect = new Rect(maskX, maskY, _modelImage.Width, _modelImage.Height);
+
+                                // result 행렬의 전체 크기
+                                Rect resultBounds = new Rect(0, 0, result.Width, result.Height);
+
+                                // 교집합 계산 (이미지 밖으로 나가는 좌표 자동 잘림 처리)
+                                // 왼쪽/위쪽 음수 좌표나 오른쪽/아래쪽 초과 좌표가 안전하게 처리됩니다.
+                                Rect clippedRect = resultBounds.Intersect(maskRect);
+
+                                if (clippedRect.Width > 0 && clippedRect.Height > 0)
+                                {
+                                    // 해당 영역을 -1.0(최소값)으로 채움 -> 다음 MinMaxLoc에서 검색 제외됨
+                                    Cv2.Rectangle(result, clippedRect, Scalar.All(-1.0), -1);
+                                }
+                                else
+                                {
+                                    // 만약 영역 계산에 실패했다면 강제로 해당 픽셀만이라도 지워서 무한루프 방지
+                                    result.Set(maxLoc.Y, maxLoc.X, -1.0f);
+                                }
+                            }
+                            resultMessage = $"매칭 성공: {foundCount}개 (Score >= {tmParams.MinScore}%)";
+                        }
+                    }
+                    break;
+
                 case "Geometric Model Finder (GMF)":
                     // *참고*: MIL GMF(Geometric Model Finder)는 벡터 기반이지만, 
                     // OpenCV 기본 기능에서는 Template Matching(픽셀 기반)이 가장 유사합니다.
@@ -269,21 +354,47 @@ namespace IndyVision
                                 Point minLoc, maxLoc;
                                 Cv2.MinMaxLoc(result, out minVal, out maxVal, out minLoc, out maxLoc);
 
-                                if (maxVal >= threshold)
+                                // [종료 조건 1] 점수가 임계값보다 낮으면 종료
+                                if (maxVal < threshold)
+                                    break;
+
+                                // [종료 조건 2] 찾은 개수 제한
+                                foundCount++;
+                                if (!gmfParams.FindAllOccurrences && foundCount > gmfParams.MaxOccurrences)
+                                    break;
+
+                                // 3. 결과 그리기 (박스 표시)
+                                Cv2.Rectangle(_destImage, new Rect(maxLoc.X, maxLoc.Y, _modelImage.Width, _modelImage.Height), Scalar.Red, 2);
+                                Cv2.PutText(_destImage, $"{maxVal * 100:F1}%", new Point(maxLoc.X, maxLoc.Y - 5), HersheyFonts.HersheySimplex, 0.5, Scalar.Blue, 1);
+
+                                // 4. [핵심 수정] 중복 검출 방지 (Non-Maximum Suppression)
+                                //    찾은 위치(maxLoc)를 '중심'으로 하여 템플릿 크기만큼의 영역을 지웁니다.
+                                //    이전 코드: maxLoc 부터 시작 (오른쪽/아래만 지움 -> 왼쪽/위쪽 점수 남음 -> 무한루프)
+                                //    수정 코드: maxLoc 주변(좌우상하)을 모두 포함하도록 마스크 영역 설정
+
+                                // 마스킹할 영역의 좌상단 좌표 계산 (모델 크기의 절반만큼 뒤로 이동)
+                                int maskX = maxLoc.X - _modelImage.Width / 2;
+                                int maskY = maxLoc.Y - _modelImage.Height / 2;
+
+                                // 마스킹 영역 설정 (모델 크기만큼)
+                                Rect maskRect = new Rect(maskX, maskY, _modelImage.Width, _modelImage.Height);
+
+                                // result 행렬의 전체 크기
+                                Rect resultBounds = new Rect(0, 0, result.Width, result.Height);
+
+                                // 교집합 계산 (이미지 밖으로 나가는 좌표 자동 잘림 처리)
+                                // 왼쪽/위쪽 음수 좌표나 오른쪽/아래쪽 초과 좌표가 안전하게 처리됩니다.
+                                Rect clippedRect = resultBounds.Intersect(maskRect);
+
+                                if (clippedRect.Width > 0 && clippedRect.Height > 0)
                                 {
-                                    foundCount++;
-                                    if (foundCount > gmfParams.MaxOccurrences && !gmfParams.FindAllOccurrences) break;
-
-                                    // 박스 그리기
-                                    Cv2.Rectangle(_destImage, new Rect(maxLoc.X, maxLoc.Y, _modelImage.Width, _modelImage.Height), Scalar.Red, 2);
-                                    Cv2.PutText(_destImage, $"{maxVal * 100:F1}%", new Point(maxLoc.X, maxLoc.Y - 5), HersheyFonts.HersheySimplex, 0.5, Scalar.Yellow, 2);
-
-                                    // 중복 검출 방지: 찾은 위치 주변을 0으로 지움 (마스킹)
-                                    Cv2.FloodFill(result, maxLoc, (Scalar)0);
+                                    // 해당 영역을 -1.0(최소값)으로 채움 -> 다음 MinMaxLoc에서 검색 제외됨
+                                    Cv2.Rectangle(result, clippedRect, Scalar.All(-1.0), -1);
                                 }
                                 else
                                 {
-                                    break;
+                                    // 만약 영역 계산에 실패했다면 강제로 해당 픽셀만이라도 지워서 무한루프 방지
+                                    result.Set(maxLoc.Y, maxLoc.X, -1.0f);
                                 }
                             }
                             resultMessage = $"매칭 성공: {foundCount}개 (Score >= {gmfParams.MinScore}%)";
@@ -349,31 +460,56 @@ namespace IndyVision
         }
 
         // GMF 미리보기 (여기서는 모델의 Canny Edge 보여주기)
-        public void PreviewGmfModel(GmfParams param)
+        //public void PreviewGmfModel(GmfParams param)
+        public void PreviewGmfModel(object param)
         {
             if (_modelImage == null) return;
 
-            // 모델 이미지의 Edge를 보여줌으로써 등록될 형태 미리보기
+            if (_destImage != null) _destImage.Dispose();
+            _destImage = new Mat();
+
+            if (_modelImage.Channels() == 1)
+                Cv2.CvtColor(_modelImage, _destImage, ColorConversionCodes.GRAY2BGR);
+            else 
+                _modelImage.CopyTo(_destImage);
+
+
             using (Mat gray = new Mat())
+            using (Mat edges = new Mat())
             {
-                if (_modelImage.Channels() == 3)
+                if(_modelImage.Channels() == 3)
                     Cv2.CvtColor(_modelImage, gray, ColorConversionCodes.BGR2GRAY);
                 else
                     _modelImage.CopyTo(gray);
 
-                // Smoothness 파라미터를 Canny의 임계값으로 활용
-                double thresh1 = param.Smoothness;
-                double thresh2 = param.Smoothness * 2;
+                double thresh1 = 0;
+                double thresh2 = 0;
+                if (param is GmfParams)
+                {
+                    GmfParams Gmp = param as GmfParams;
+                    thresh1 = Gmp.Smoothness;
+                    thresh2 = Gmp.Smoothness * 2;
+                }
+                else if (param is TemplateMatchParams)
+                {
+                    TemplateMatchParams Tmp = param as TemplateMatchParams;
+                    thresh1 = Tmp.Smoothness;
+                    thresh2 = Tmp.Smoothness * 2;
+                }
 
-                Cv2.Canny(gray, _destImage, thresh1, thresh2);
+                    // Canny Edge
+                    //double thresh1 = param.Smoothness;
+                    //double thresh2 = param.Smoothness * 2;
+                Cv2.Canny(gray, edges, thresh1, thresh2);
 
-                // 보기에 좋게 색상 반전 등 처리 가능
-                // Cv2.BitwiseNot(_destImage, _destImage);
+                _destImage.SetTo(Scalar.Lime, edges);
             }
-            _cachedProcessed = _destImage.ToWriteableBitmap();
+
+                _cachedProcessed = _destImage.ToWriteableBitmap();
         }
 
-        public void TrainGmfModel(GmfParams param)
+        //public void TrainGmfModel(GmfParams param)
+        public void TrainGmfModel(object param)
         {
             // OpenCV Template Matching은 별도의 학습(Training) 과정이 필요 없으므로
             // 모드만 종료하고 원본 화면으로 복귀

@@ -1,0 +1,401 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace IndyVision
+{
+    public abstract class AlgorithmParamsBase : INotifyPropertyChanged
+    {
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    public class ThresholdParams : AlgorithmParamsBase
+    {
+        // 1. Backing Field (실제 금고)
+        // 데이터를 실제로 저장하는 'private' 변수입니다. 외부에서 직접 못 건드립니다.
+        private byte _thresholdValue = 128;
+        // 2. Property (창구/출입문)
+        // 외부(WPF UI)에서 접근할 수 있는 'public' 속성입니다.
+        public byte ThresholdValue
+        {
+            // 값을 달라고 하면 금고(_thresholdValue)에서 꺼내줍니다.
+            get => _thresholdValue;
+
+            // 값을 넣으려고 할 때 (예: 사용자가 슬라이더를 움직임)
+            set
+            {
+                // 1. 값이 바뀔 때만 동작 (같은 값이면 무시 - 성능 최적화)
+                if (_thresholdValue != value)
+                {
+                    // 금고에 새 값을 저장하고
+                    _thresholdValue = value;
+
+                    // 2. [중요] "ThresholdValue가 변했습니다!"라고 방송합니다.
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        // [추가] 2. 상한값 (Max) - 기본값 255 (완전 흰색 포함)
+        private byte _thresholdMax = 255;
+        public byte ThresholdMax
+        {
+            get => _thresholdMax;
+            set { if (_thresholdMax != value) { _thresholdMax = value; OnPropertyChanged(); } }
+        }
+
+    }
+
+    public class MorphologyParams : AlgorithmParamsBase
+    {
+        private int _iterations = 1;
+        public int Iterations
+        {
+            get => _iterations;
+            set
+            {
+                if (_iterations != value)
+                {
+                    _iterations = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private int _kernelSize = 3;
+        public int KernelSize
+        {
+            get => _kernelSize;
+            set
+            {
+                if (_kernelSize == value)
+                    return;
+                _kernelSize = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private string _operationMode = "Erode";
+        public string OperationMode
+        {
+            get => _operationMode;
+            set
+            {
+                if (_operationMode != value)
+                {
+                    _operationMode = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+    }
+
+    public class EdgeParams : AlgorithmParamsBase
+    {
+        // 1. 엣지 검출 방법 (Sobel, Prewitt, Laplacian)
+        private string _method = "Sobel";
+        public string Method
+        {
+            get => _method;
+            set
+            {
+                if (_method != value)
+                {
+                    _method = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private int _smoothness = 25;
+        public int Smoothness
+        {
+            get => _smoothness;
+            set
+            {
+                if (_smoothness != value)
+                {
+                    _smoothness = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+    }
+
+    public class AdaptiveThresholdParams : AlgorithmParamsBase
+    {
+        // 1. Window Size (주변을 얼마나 넓게 볼지)
+        private int _windowSize = 35;
+        public int WindowSize
+        {
+            get => _windowSize;
+            set
+            {
+                if (_windowSize != value)
+                {
+                    _windowSize = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        // 2. Offset (민감도: 값이 클수록 엄격하게 검사하여 노이즈 제거)
+        private int _offset = 10;
+        public int Offset
+        {
+            get => _offset;
+            set
+            {
+                if (_offset != value)
+                {
+                    _offset = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        // 3. Mode (밝은것? 어두운것?)
+        private string _mode = "Bright Ojbect (밝은 물체)";
+        public string Mode
+        {
+            get => _mode;
+            set
+            {
+                if (_mode != value)
+                {
+                    _mode = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+    }
+
+    public class BlobParams : AlgorithmParamsBase
+    {
+        // [추가] 1. 밝기 범위 설정 (이진화용)
+        private byte _thresholdMin = 50;
+        public byte ThresholdMin
+        {
+            get => _thresholdMin;
+            set { if (_thresholdMin != value) { _thresholdMin = value; OnPropertyChanged(); } }
+        }
+
+        private byte _thresholdMax = 200;
+        public byte ThresholdMax
+        {
+            get => _thresholdMax;
+            set { if (_thresholdMax != value) { _thresholdMax = value; OnPropertyChanged(); } }
+        }
+
+        // 최소 면적(픽셀 수): 이 값보다 작은 덩어리는 무시.
+        private int _minArea = 100;
+        public int MinArea
+        {
+            get => _minArea;
+            set
+            {
+                if (_minArea != value)
+                {
+                    _minArea = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        // (선택 사항) 결과를 화면에 사각형으로 그릴지 여부.
+        private bool _drawBox = true;
+        public bool DrawBox
+        {
+            get => _drawBox;
+            set
+            {
+                if (_drawBox != value)
+                {
+                    _drawBox = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+    }
+
+    public class RoiParams : AlgorithmParamsBase
+    {
+        // empty for future use
+    }
+
+    public class GmfParams : AlgorithmParamsBase
+    {
+        // 모델 정의용 파라미터
+        // 윤관선을 얼마나 부드럽게 처리 할지(0 ~ 100). 높은 값일수록 자잘한 엣지는 무시.
+        private double _smoothness = 50;
+        public double Smoothness
+        {
+            get => _smoothness;
+            set
+            {
+                if (_smoothness == value) return;
+                _smoothness = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // 검색용 파라미터 (실행 단계)
+        // 최소 일치률 (0 ~ 100). 이 점수 이상인것만 찾는다.
+        private double _minScore = 65;
+        public double MinScore
+        {
+            get => _minScore;
+            set
+            {
+                if (_minScore == value) return;
+                _minScore = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // 확신도 (Certainty): 후보군 선정 기준
+        private double _certainty = 20;
+        public double Certainty
+        {
+            get => _certainty;
+            set
+            {
+                if (value == _certainty) return;
+                _certainty = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // 검색 속도(Speed)
+        // 0: Very Faster, 1:Faster, 2: Medium, 3: Robust, 4: Very Robust
+        private int _searchSpeed = 2;
+        public int SearchSpeed
+        {
+            get => _searchSpeed;
+            set
+            {
+                if (_searchSpeed == value) return;
+                _searchSpeed = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // [추가] 디테일 레벨 (Detail Level)
+        // 0: Medium, 1: High (복잡한 패턴용)
+        private int _detailLevel = 1;
+        public int DetailLevel
+        {
+            get => _detailLevel;
+            set
+            {
+                if (_detailLevel == value) return;
+                _detailLevel = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // 4. 검색 개수 설정 (M_NUMBER)
+        // [핵심] "모두 찾기" 체크박스용
+        private bool _findAllOccurrences = true;
+        public bool FindAllOccurrences
+        {
+            get => _findAllOccurrences;
+            set
+            {
+                if (_findAllOccurrences == value) return;
+
+                _findAllOccurrences = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // [추가] 검색 개수 (Number)
+        private int _maxOccurrences = 1000;
+        public int MaxOccurrences
+        {
+            get => _maxOccurrences;
+            set
+            {
+                if (_maxOccurrences == value) return;
+                _maxOccurrences = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // [추가] 각도 범위 (Angle Delta)
+        // +- 범위 (예: 10이면 -10도 ~ +10도)
+        private double _angleDelta = 5.0;
+        public double AngleDelta
+        {
+            get => _angleDelta;
+            set
+            {
+                if (_angleDelta == value) return;
+                _angleDelta = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // 6. 크기 (Scale)
+        private double _scaleMinFactor = 0.8;
+        public double ScaleMinFactor
+        {
+            get => _scaleMinFactor;
+            set
+            {
+                if (_scaleMinFactor == value) return;
+                _scaleMinFactor = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private double _scaleMaxFactor = 1.2;
+        public double ScaleMaxFactor
+        {
+            get => _scaleMaxFactor;
+            set
+            {
+                if (_scaleMaxFactor == value) return;
+
+                _scaleMaxFactor = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // 7. 중복 제거 관련 (true: 중복허용, false: 중복제거)
+        private bool _sharedEdges = false; // M_SHARED_EDGES
+        public bool SharedEdges
+        {
+            get => _sharedEdges;
+            set
+            {
+                if (_sharedEdges == value) return;
+
+                _sharedEdges = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private double _overlap = 50.0; // M_OVERLAP
+        public double Overlap
+        {
+            get => _overlap;
+            set
+            {
+                if (_overlap != value) return;
+
+                _overlap = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+}

@@ -1,0 +1,515 @@
+﻿<Window x:Class="IndyVision.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:local="clr-namespace:IndyVision"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="768" Width="1280"
+        Closing="Window_Closing">
+    
+    
+    <Window.Resources>
+        <DataTemplate DataType="{x:Type local:ThresholdParams}">
+            <!--<StackPanel>
+                <TextBlock Text="Threshold Level (0~255)" Margin="0,0,0,5"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="50"/>
+                    </Grid.ColumnDefinitions>
+                    <Slider Maximum="255" Minimum="0" Value="{Binding ThresholdValue}" VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding ThresholdValue}" Grid.Column="1" Margin="5,0,0,0" TextAlignment="Center"/>
+                </Grid>
+            </StackPanel>-->
+
+            <StackPanel>
+                <TextBlock Text="Threshold Range (밝기 범위 설정)" Margin="0,0,0,5" FontWeight="Bold"/>
+
+                <TextBlock Text="Min Value (하한값)" Margin="0,5,0,0"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="50"/>
+                    </Grid.ColumnDefinitions>
+                    <Slider Maximum="255" Minimum="0" Value="{Binding ThresholdValue}" VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding ThresholdValue}" Grid.Column="1" Margin="5,0,0,0" TextAlignment="Center"/>
+                </Grid>
+
+                <TextBlock Text="Max Value (상한값)" Margin="0,5,0,0"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="50"/>
+                    </Grid.ColumnDefinitions>
+                    <Slider Maximum="255" Minimum="0" Value="{Binding ThresholdMax}" VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding ThresholdMax}" Grid.Column="1" Margin="5,0,0,0" TextAlignment="Center"/>
+                </Grid>
+
+                <TextBlock Text="* 이 범위 안의 밝기만 흰색으로 변합니다." FontSize="10" Foreground="Gray" Margin="0,5"/>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type local:MorphologyParams}">
+            <StackPanel>
+                <TextBlock Text="Operation Mode" Margin="0,0,0,5"/>
+                <ComboBox SelectedItem="{Binding OperationMode}" Margin="0,0,0,10">
+                    <sys:String>Erode</sys:String>
+                    <sys:String>Dilate</sys:String>
+                    <sys:String>Open</sys:String>
+                    <sys:String>Close</sys:String>
+                </ComboBox>
+
+                <TextBlock Text="Iterations (반복 횟수)" Margin="0,0,0,5"/>
+                <TextBox Text="{Binding Iterations}" Padding="3"/>
+
+                <TextBlock Text="KernelSize" Margin="0,0,0,5"/>
+                <TextBlock Text="(3, 5, 7, ... 홀수권장)" FontSize="10" Foreground="Gray" Margin="0,0,0,5"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="50"/>
+                    </Grid.ColumnDefinitions>
+                    <Slider Maximum="21" Minimum="3" TickFrequency="2" IsSnapToTickEnabled="True" 
+                            Value="{Binding KernelSize}" VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding KernelSize}" Grid.Column="1" Margin="5,0,0,0" TextAlignment="Center"/>
+                </Grid>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type local:EdgeParams}">
+            <StackPanel>
+                <TextBlock Text="Edge Algorithm (알고리즘 선택)" Margin="0,0,0,5"/>
+                <ComboBox SelectedItem="{Binding Method}" Margin="0,0,0,10">
+                    <sys:String>Sobel (Standard)</sys:String>
+                    <sys:String>Prewitt (Soft)</sys:String>
+                    <sys:String>Laplacian (Detail)</sys:String>
+                </ComboBox>
+
+                <TextBlock Text="Edge Sensitivity (엣지 감도)" Margin="0,0,0,5"/>
+                <TextBlock Text="(값이 높을수록 강한 엣지만 남습니다)" FontSize="10" Foreground="Gray" Margin="0,0,0,5"/>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="50"/>
+                    </Grid.ColumnDefinitions>
+                    <Slider Maximum="100" Minimum="0" Value="{Binding Smoothness}" VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding Smoothness}" Grid.Column="1" Margin="5,0,0,0" TextAlignment="Center"/>
+                </Grid>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type local:AdaptiveThresholdParams}">
+            <StackPanel>
+                <TextBlock Text="Target Mode" Margin="0,0,0,5"/>
+                <ComboBox SelectedItem="{Binding Mode}" Margin="0,0,0,10">
+                    <sys:String>Bright Object (밝은 물체)</sys:String>
+                    <sys:String>Dark Object (어두운 물체)</sys:String>
+                </ComboBox>
+
+                <TextBlock Text="Local Window Size (지역 범위)" Margin="0,0,0,5"/>
+                <TextBlock Text="(물체 두께보다 커야 합니다.)" FontSize="10" Foreground="Gray"/>
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="50"/>
+                    </Grid.ColumnDefinitions>
+                    <Slider Grid.Column="0" Maximum="200" Minimum="3" Value="{Binding WindowSize}" VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding WindowSize}" Grid.Column="1" Margin="5,0,0,0" TextAlignment="Center"/>
+                </Grid>
+
+                <TextBlock Text="Offset (민감도/노이즈 제거)" Margin="0,0,0,5" />
+                <TextBlock Text="(높을수록 자잘한 노이즈 제거)" FontSize="10" Foreground="Gray" Margin="0,0,0,5"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="50"/>
+                    </Grid.ColumnDefinitions>
+                    <Slider Maximum="50" Minimum="0" Value="{Binding Offset}" VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding Offset}" Grid.Column="1" Margin="5,0,0,0" TextAlignment="Center"/>
+                </Grid>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type local:BlobParams}">
+            <StackPanel>
+                <TextBlock Text="1. Target Brightness (찾을 밝기 범위)" FontWeight="Bold" Margin="0,0,0,5"/>
+
+                <TextBlock Text="Min Brightness (하한값)"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="50"/>
+                    </Grid.ColumnDefinitions>
+                    <Slider Maximum="255" Minimum="0" Value="{Binding ThresholdMin}" VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding ThresholdMin}" Grid.Column="1" TextAlignment="Center"/>
+                </Grid>
+
+                <TextBlock Text="Max Brightness (상한값)"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="50"/>
+                    </Grid.ColumnDefinitions>
+                    <Slider Maximum="255" Minimum="0" Value="{Binding ThresholdMax}" VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding ThresholdMax}" Grid.Column="1" TextAlignment="Center"/>
+                </Grid>
+
+                <Separator Margin="0,10"/>
+
+                <TextBlock Text="2. Size Filtering (크기 제한)" FontWeight="Bold" Margin="0,0,0,5"/>
+                <TextBlock Text="Min Area (최소 픽셀 수)"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="50"/>
+                    </Grid.ColumnDefinitions>
+                    <Slider Maximum="5000" Minimum="10" Value="{Binding MinArea}" VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding MinArea}" Grid.Column="1" TextAlignment="Center"/>
+                </Grid>
+
+                <CheckBox Content="Draw Box (박스 표시)" IsChecked="{Binding DrawBox}" Margin="0,10"/>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type local:GmfParams}">
+            <StackPanel>
+                <TextBlock Text="[Step 1] Model Definition (모델 등록)" FontWeight="Bold" Margin="0,0,0,5"/>
+                <Button Content="Load ROI Image (모델 불러오기)"
+                        Command="{Binding DataContext.LoadModelCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        Margin="0,0,0,10" Height="30" />
+
+                <TextBlock Text="Smoothness (엣지 부드러움)" Margin="0,0,0,5" />
+                <TextBlock Text="(모델의 윤곽선이 잘 보이도록 조절하세요" FontSize="10" Foreground="Gray"/>
+
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="40"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="Smoothness:" VerticalAlignment="Center"/>
+                    <Slider Grid.Column="1" Maximum="100" Minimum="0" Value="{Binding Smoothness}" VerticalAlignment="Center" Margin="5,0" />
+                    <TextBox Grid.Column="2" Text="{Binding Smoothness}" Margin="5,0,0,0" TextAlignment="Center"/>
+                </Grid>
+
+                <Grid Margin="0,0,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Speed:" VerticalAlignment="Center"/>
+                    <ComboBox Grid.Column="1" SelectedIndex="{Binding SearchSpeed}">
+                        <ComboBoxItem Content="0: Very Fast"/>
+                        <ComboBoxItem Content="1: Fast"/>
+                        <ComboBoxItem Content="2: Medium"/>
+                        <ComboBoxItem Content="3: Robust"/>
+                        <ComboBoxItem Content="4: Very Robust"/>
+                    </ComboBox>
+                </Grid>
+
+                <Grid Margin="0,0,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Detail Level:" VerticalAlignment="Center"/>
+                    <ComboBox Grid.Column="1" SelectedIndex="{Binding DetailLevel}">
+                        <ComboBoxItem Content="Medium"/>
+                        <ComboBoxItem Content="High"/>
+                    </ComboBox>
+                </Grid>
+
+                <Button Content="Train Model (모델 등록 완료)"
+                        Command="{Binding DataContext.TrainModelCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        Background="LightGreen" FontWeight="Bold" Margin="0,0,0,20" Height="35" />
+
+                <Separator Margin="0,0,0,10"/>
+
+                <TextBlock Text="[Step 2] Search Setting (검사 설정)" FontWeight="Bold" Margin="0,0,0,5"/>
+
+                <Grid Margin="0,0,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="40"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="Min Score:" VerticalAlignment="Center" ToolTip="Acceptance Level"/>
+                    <Slider Grid.Column="1" Maximum="100" Minimum="0" Value="{Binding MinScore}" Margin="5,0"/>
+                    <TextBox Grid.Column="2" Text="{Binding MinScore}" TextAlignment="Center"/>
+                </Grid>
+
+                <Grid Margin="0,0,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="40"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Certainty:" VerticalAlignment="Center" ToolTip="Candidate Acceptance Level"/>
+                    <Slider Grid.Column="1" Maximum="100" Minimum="0" Value="{Binding Certainty}" Margin="5,0"/>
+                    <TextBox Grid.Column="2" Text="{Binding Certainty}" TextAlignment="Center"/>
+                </Grid>
+
+                <CheckBox Content="Find All(모두 찾기)" IsChecked="{Binding FindAllOccurrences}" Margin="0,5,0,2" FontWeight="Bold"/>
+                <Grid Margin="0,0,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="40"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="Max Count:" VerticalAlignment="Center" />
+                    <Slider Grid.Column="1" Maximum="500" Minimum="1" Value="{Binding MaxOccurrences}" Margin="5,0">
+                        <Slider.Style>
+                            <Style TargetType="Slider">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding FindAllOccurrences}" Value="True">
+                                        <Setter Property="IsEnabled" Value="False"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Slider.Style>
+                    </Slider>
+                    <TextBox Grid.Column="2" Text="{Binding MaxOccurrences}" TextAlignment="Center">
+                        <TextBox.Style>
+                            <Style TargetType="TextBox">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding FindAllOccurrences}" Value="True">
+                                        <Setter Property="IsEnabled" Value="False"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
+                </Grid>
+
+
+                <TextBlock Text="-- Geometry --" Foreground="Gray" Margin="0,5"/>
+
+                <Grid Margin="0,0,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="40"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Angle (+/-):" VerticalAlignment="Center"/>
+                    <Slider Grid.Column="1" Maximum="180" Minimum="0" Value="{Binding AngleDelta}" Margin="5,0"/>
+                    <TextBox Grid.Column="2" Text="{Binding AngleDelta}" TextAlignment="Center"/>
+                </Grid>
+
+                <Grid Margin="0,0,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="40"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="Scale min:" VerticalAlignment="Center"/>
+                    <Slider Grid.Column="1" Maximum="1.0" Minimum="0.1" Value="{Binding ScaleMinFactor}" Margin="5,0"/>
+                    <TextBox Grid.Column="2" Text="{Binding ScaleMinFactor}" TextAlignment="Center"/>
+                </Grid>
+
+                <Grid Margin="0,0,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="40"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="Scale max:" VerticalAlignment="Center"/>
+                    <Slider Grid.Column="1" Maximum="2.0" Minimum="1.0" Value="{Binding ScaleMaxFactor}" Margin="5,0"/>
+                    <TextBox Grid.Column="2" Text="{Binding ScaleMaxFactor}" TextAlignment="Center"/>
+                </Grid>
+
+                <TextBlock Text="-- Overlap &amp; Advanced --" Foreground="Gray" Margin="0,5"/>
+                <CheckBox Content="Shared Edges (공유 엣지 허용)" IsChecked="{Binding SharedEdges}" Margin="0,0,0,2"/>
+                <Grid Margin="0,0,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="40"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Overlap (%):" VerticalAlignment="Center"/>
+                    <Slider Grid.Column="1" Maximum="100" Minimum="0" Value="{Binding Overlap}" Margin="5,0"/>
+                    <TextBox Grid.Column="2" Text="{Binding Overlap}" TextAlignment="Center"/>
+                </Grid>
+
+
+                <!--<Grid Margin="0,0,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Speed:" VerticalAlignment="Center"/>
+                    <ComboBox Grid.Column="1" SelectedIndex="{Binding SearchSpeed}">
+                        <ComboBoxItem Content="0: Very Fast"/>
+                        <ComboBoxItem Content="1: Fast"/>
+                        <ComboBoxItem Content="2: Medium"/>
+                        <ComboBoxItem Content="3: Robust"/>
+                        <ComboBoxItem Content="4: Very Robust"/>
+                    </ComboBox>
+                </Grid>
+
+                <Grid Margin="0,0,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Detail Level:" VerticalAlignment="Center"/>
+                    <ComboBox Grid.Column="1" SelectedIndex="{Binding DetailLevel}">
+                        <ComboBoxItem Content="Medium"/>
+                        <ComboBoxItem Content="High"/>
+                    </ComboBox>
+                </Grid>-->
+
+
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type local:AlgorithmParamsBase}">
+            <TextBlock Text="설정 가능한 속성이 없습니다." Foreground="Gray" FontStyle="Italic"/>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Window.DataContext>
+        <local:MainViewModel/>
+    </Window.DataContext>
+
+    <Grid Background="#F0F0F0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Background="#104E8B" Padding="10">
+            <TextBlock Text="INDY Automation: VISION" Foreground="White" FontSize="18" FontWeight="Bold"/>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="auto"/>
+                <ColumnDefinition Width="320"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0" Margin="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,5" Panel.ZIndex="1">
+                    <CheckBox Content="원본 이미지 보기 (View Original)" 
+                              IsChecked="{Binding ShowOriginal}" 
+                              FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <Border Grid.Row="1" x:Name="ZoomBorder" 
+                        BorderBrush="#333" BorderThickness="1" Background="#333333"
+                        ClipToBounds="True"
+                        MouseWheel="ZoomBorder_MouseWheel"
+                        MouseDown="ZoomBorder_MouseDown"
+                        MouseUp="ZoomBorder_MouseUp"
+                        MouseMove="ZoomBorder_MouseMove"
+                        SizeChanged="ZoomBorder_SizeChanged"
+                        Loaded="ZoomBorder_Loaded">
+
+
+                    <Canvas x:Name="ImgCanvas">
+                        <Image x:Name="ImgView" Source="{Binding DisplayImage}" Stretch="None"
+                           RenderOptions.BitmapScalingMode="NearestNeighbor"
+                           HorizontalAlignment="Left" 
+                           VerticalAlignment="Top"
+                           SizeChanged="ImgView_SizeChanged">
+                            <Image.RenderTransform>
+                                <TransformGroup>
+                                    <!-- XAML에 <... x:Name="이름"/> 을 적는 것이 곧 "객체를 생성하고 변수명도 지어라"라는 명령-->
+                                    <ScaleTransform x:Name="imgScale" />
+                                    <TranslateTransform x:Name="imgTranslate" />
+                                </TransformGroup>
+                            </Image.RenderTransform>
+                        </Image>
+
+                        <!--WPF가 ContextMenu 속성이 설정된 요소는 우클릭 시 자동으로 메뉴를 연다는 규칙을 가지고 있기 때문에, 
+                        별도의 C# 이벤트 핸들러 없이도 동작-->
+                        <Rectangle x:Name="RoiRect" Stroke="Red" StrokeThickness="2"
+                                   Fill="#33FF0000" Visibility="Collapsed">
+                            <Rectangle.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Crop Image (잘라내기)" Click="MenuItem_Crop_Click" />
+                                    <MenuItem Header="Save ROI (저장하기)" Click="MenuItem_Save_Click"/>
+                                </ContextMenu>
+                            </Rectangle.ContextMenu>
+                        </Rectangle>
+
+                    </Canvas>
+                </Border>
+            </Grid>
+
+            <GridSplitter Grid.Column="1" Width="5"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Stretch"
+                          Background="#FFBBBBBB"
+                          ShowsPreview="True"               
+                          ResizeBehavior="PreviousAndNext"
+                          />
+
+            <Grid Grid.Column="2" Margin="0,10,10,10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="2*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <GroupBox Header="이미지 선택 버튼" Grid.Row="0" Padding="5" Margin="5,0,0,0">
+                    <Button Content="이미지 파일 열기" Command="{Binding LoadImageCommand}" Height="35" Margin="2"/>
+                </GroupBox>
+
+                <GroupBox Header="이미지 전처리 알고리즘 선택" Grid.Row="1" Margin="5,10,0,0" Padding="5">
+                    <ListBox ItemsSource="{Binding AlgorithmList}" 
+                             SelectedItem="{Binding SelectedAlgorithm}"/>
+                </GroupBox>
+
+                <GridSplitter Grid.Row="2" Height="5"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Center"
+                              Background="#FFBBBBBB"
+                              ShowsPreview="True"
+                              ResizeBehavior="PreviousAndNext"
+                              />
+
+                <GroupBox Header="이미지 전처리 및 검출 알고리즘 속성" Grid.Row="3" Margin="5,10,0,0" Padding="10" BorderBrush="#104E8B">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ContentControl Content="{Binding CurrentParameters}"/>
+                    </ScrollViewer>
+                </GroupBox>
+
+                <Button Grid.Row="4" Content="적용 (Apply)" Command="{Binding ApplyAlgorithmCommand}" 
+                        Height="45" Margin="5,10,0,0" FontWeight="Bold" Background="#104E8B" Foreground="White"/>
+            </Grid>
+        </Grid>
+
+        <StatusBar Grid.Row="2" Background="White" BorderBrush="Gray" BorderThickness="0,1,0,0">
+            <StatusBarItem Content="{Binding AnalysisResult}" FontWeight="Bold" Foreground="Blue"/>
+
+            <StatusBarItem HorizontalAlignment="Right">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding MouseCoordinationInfo}" Margin="0,0,20,0" VerticalAlignment="Center" FontWeight="SemiBold"/>
+
+                    <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="0,0,10,0"/>
+
+                    <TextBlock Text="리소스 사용량 표시 영역" VerticalAlignment="Center"/>
+                </StackPanel>
+            </StatusBarItem>
+
+            <!--<StatusBarItem Content="리소스 사용량 표시 영역" HorizontalAlignment="Right"/>-->
+        </StatusBar>
+    </Grid>
+</Window>

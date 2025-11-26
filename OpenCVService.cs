@@ -275,7 +275,18 @@ namespace IndyVision
 
                                 // 3. 결과 그리기 (박스 표시)
                                 Cv2.Rectangle(_destImage, new Rect(maxLoc.X, maxLoc.Y, _modelImage.Width, _modelImage.Height), Scalar.Red, 2);
-                                Cv2.PutText(_destImage, $"{maxVal * 100:F1}%", new Point(maxLoc.X, maxLoc.Y - 5), HersheyFonts.HersheySimplex, 0.5, Scalar.Blue, 1);
+                                Cv2.PutText(_destImage, $"{maxVal * 100:F1}%", new Point(maxLoc.X, maxLoc.Y - 5), HersheyFonts.HersheyScriptSimplex, 0.5, Scalar.YellowGreen, 1);
+
+                                // [추가] 중심점 계산
+                                int centerX = maxLoc.X + (_modelImage.Width / 2);
+                                int centerY = maxLoc.Y + (_modelImage.Height / 2);
+
+                                // 중심점에 점 그리기 (반지름: 2, 채우기 옵션: -1)
+                                Cv2.Circle(_destImage, centerX, centerY, 2, Scalar.Red, -1);
+
+                                // [추가] 하단: 중심 좌표 표기
+                                string coordText = $"(X: {centerX}, Y: {centerY})";
+                                Cv2.PutText(_destImage, coordText, new Point(maxLoc.X, maxLoc.Y + _modelImage.Height + 15), HersheyFonts.HersheySimplex, 0.5, Scalar.Lime, 1);
 
                                 // 4. [핵심 수정] 중복 검출 방지 (Non-Maximum Suppression)
                                 //    찾은 위치(maxLoc)를 '중심'으로 하여 템플릿 크기만큼의 영역을 지웁니다.
@@ -446,7 +457,8 @@ namespace IndyVision
         }
 
         // GMF 모델 로드
-        public void LoadGmfModelImage(string filePath)
+        //public void LoadGmfModelImage(string filePath)
+        public void LoadModelImage(string filePath)
         {
             if (_modelImage != null) _modelImage.Dispose();
             _modelImage = Cv2.ImRead(filePath, ImreadModes.Color);
@@ -461,7 +473,8 @@ namespace IndyVision
 
         // GMF 미리보기 (여기서는 모델의 Canny Edge 보여주기)
         //public void PreviewGmfModel(GmfParams param)
-        public void PreviewGmfModel(object param)
+        //public void PreviewGmfModel(object param)
+        public void PreviewModel(object param)
         {
             if (_modelImage == null) return;
 
@@ -509,7 +522,8 @@ namespace IndyVision
         }
 
         //public void TrainGmfModel(GmfParams param)
-        public void TrainGmfModel(object param)
+        //public void TrainGmfModel(object param)
+        public void TrainModel(object param)
         {
             // OpenCV Template Matching은 별도의 학습(Training) 과정이 필요 없으므로
             // 모드만 종료하고 원본 화면으로 복귀

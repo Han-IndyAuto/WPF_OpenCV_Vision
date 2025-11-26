@@ -292,7 +292,8 @@ namespace IndyVision
                 try
                 {
                     // GMF 모델용 이미지를 로드하고, 화면에 보여줌 (모델링 모드 진입)
-                    _cvServices.LoadGmfModelImage(dlg.FileName);
+                    //_cvServices.LoadGmfModelImage(dlg.FileName);
+                    _cvServices.LoadModelImage(dlg.FileName);
 
                     // 화면 갱신
                     ShowOriginal = false;
@@ -301,16 +302,18 @@ namespace IndyVision
                     // GMF 파라미터가 있으면 초기 미리보기 실행.
                     if (CurrentParameters is GmfParams gmfParams)
                     {
-                        _cvServices.PreviewGmfModel(gmfParams);
+                        //_cvServices.PreviewGmfModel(gmfParams);
+                        _cvServices.PreviewModel(gmfParams);
                         UpdateDisplay();
                     }
 
                     else if(CurrentParameters is TemplateMatchParams tmParams)
                     {
-                        _cvServices.PreviewGmfModel(tmParams);
+                        //_cvServices.PreviewGmfModel(tmParams);
+                        _cvServices.PreviewModel(tmParams);
                     }
 
-                        AnalysisResult = "모델 이미지 로드됨. 속성을 조절하여 모델을 정의하세요.";
+                    AnalysisResult = "모델 이미지 로드됨. 속성을 조절하여 모델을 정의하세요.";
                 }
                 catch (Exception ex)
                 {
@@ -326,7 +329,8 @@ namespace IndyVision
             {
                 try
                 {
-                    _cvServices.TrainGmfModel(gmfParams);
+                    //_cvServices.TrainGmfModel(gmfParams);
+                    _cvServices.TrainModel(gmfParams);
                     AnalysisResult = "모델 등록 완료! 이제 검사 이미지를 열고 '적용'을 누르세요";
 
                     // 다시 검사 원본 이미지 보기로 전환.
@@ -342,7 +346,8 @@ namespace IndyVision
             {
                 try
                 {
-                    _cvServices.TrainGmfModel(tmParam);
+                    //_cvServices.TrainGmfModel(tmParam);
+                    _cvServices.TrainModel(tmParam);
                     AnalysisResult = "모델 등록 완료! 이제 검사 이미지를 열고 '적용'을 누르세요";
 
                     // 다시 검사 원본 이미지 보기로 전환.
@@ -383,13 +388,25 @@ namespace IndyVision
             if (string.IsNullOrEmpty(SelectedAlgorithm)) return;
 
             // GMF 모드일때, 슬라이더를 움직이면 검사가 아니라 모델 미리보기를 적용
+            // String.Contain("검색어") 함수는 긴 문장안에 검색어가 포함되어 있는지 물어 보는 함수.
             if (SelectedAlgorithm.Contains("GMF") && _cvServices.IsModelDefinitionMode)
             {
                 if (CurrentParameters is GmfParams gmfParams)
                 {
-                    _cvServices.PreviewGmfModel(gmfParams); // 모델 윤곽선 미리보기
+                    //_cvServices.PreviewGmfModel(gmfParams); // 모델 윤곽선 미리보기
+                    _cvServices.PreviewModel(gmfParams); // 모델 윤곽선 미리보기
                     UpdateDisplay();
                     return; // 검사는 하지 않고 리턴
+                }
+            }
+            else if(SelectedAlgorithm.Contains("TM") && _cvServices.IsModelDefinitionMode)
+            {
+                if(CurrentParameters is TemplateMatchParams tmParams)
+                {
+                    //_cvServices.PreviewGmfModel(tmParams);
+                    _cvServices.PreviewModel(tmParams);
+                    UpdateDisplay();
+                    return;
                 }
             }
 

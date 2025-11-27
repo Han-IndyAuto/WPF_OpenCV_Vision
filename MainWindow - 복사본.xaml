@@ -14,8 +14,6 @@
         
         <!-- 그리기 도구 -->
         <ContextMenu x:Key="DrawingContextMenu" >
-            <MenuItem Header="Draw Roi (관심 영역)" Click="Menu_DrawRoi_Click" />
-            <Separator />
             <MenuItem Header="Draw Line (직선그리기)" Click="Menu_DrawLine_Click" />
             <MenuItem Header="Draw Circle (원 그리기)" Click="Menu_DrawCircle_Click" />
             <MenuItem Header="Draw Rectangle (사각형 그리기)" Click="Menu_DrawRect_Click" />
@@ -506,7 +504,7 @@
                 <Border Grid.Row="1" x:Name="ZoomBorder" 
                         BorderBrush="#333" BorderThickness="1" Background="#333333"
                         ClipToBounds="True"
-                        MouseRightButtonDown="ZoomBorder_MouseRightButtonDown"
+                        ContextMenu="{StaticResource DrawingContextMenu}"
                         MouseWheel="ZoomBorder_MouseWheel"
                         MouseDown="ZoomBorder_MouseDown"
                         MouseUp="ZoomBorder_MouseUp"

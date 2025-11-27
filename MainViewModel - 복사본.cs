@@ -150,7 +150,7 @@ namespace IndyVision
 
             AlgorithmList = new ObservableCollection<string>
             {
-                //"ROI Selection (영역 설정)",
+                "ROI Selection (영역 설정)",
                 "Gray 처리", // (OpenCV 서비스 로직에서 예외처리 혹은 구현 필요, 여기선 생략)
                 "Threshold (이진화)",
                 "Adaptive Threshold (적응형 이진화)",

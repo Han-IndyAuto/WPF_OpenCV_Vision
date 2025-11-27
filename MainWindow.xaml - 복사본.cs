@@ -20,7 +20,6 @@ namespace IndyVision
     public enum DrawingMode
     {
         None,
-        Roi,
         Line,
         Circle,
         Rectangle
@@ -251,36 +250,6 @@ namespace IndyVision
 
         private void ZoomBorder_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (ImgView.Source == null) return;
-
-            bool isClickedOnRoi = false;
-            if(RoiRect.Visibility == Visibility.Visible && _currentRoiRect.Width > 0 && _currentRoiRect.Height > 0)
-            {
-                Point mousePt = e.GetPosition(ImgView);
-                if(_currentRoiRect.Contains(mousePt))
-                {
-                    isClickedOnRoi = true;
-                }
-            }
-
-            if (isClickedOnRoi)
-            {
-                return;
-            }
-            else
-            {
-                ContextMenu menu = this.FindResource("DrawingContextMenu") as ContextMenu;
-                //ContextMenu menu = this.Resources["DrawingContextMenu"] as ContextMenu;
-                if (menu != null)
-                {
-                    menu.PlacementTarget = sender as UIElement;
-                    menu.IsOpen = true;
-                }
-                e.Handled = true;
-            }
-
-            
-            /*
             var vm = this.DataContext as MainViewModel;
 
             // 이미지가 없으면 무시
@@ -294,98 +263,29 @@ namespace IndyVision
                 FitImageToScreen();
                 e.Handled = true; 
             }
+            /*
+            if (!isRoiMode)
+            {
+                // ROI 모드가 아닐 때 -> 팝업 메뉴 열기
+                ContextMenu menu = this.Resources["DrawingContextMenu"] as ContextMenu;
+                if (menu != null)
+                {
+                    // [중요 수정] PlacementTarget을 설정해야 메뉴가 올바른 위치에 나타납니다.
+                    // 리소스에 정의된 ContextMenu는 부모가 없으므로 이를 지정해주지 않으면 IsOpen=true 해도 보이지 않을 수 있습니다.
+                    menu.PlacementTarget = sender as UIElement;
+                    menu.IsOpen = true;
+                }
+            }
+            else
+            {
+                // ROI 모드일 때 -> 기존처럼 화면 맞춤 기능 (선택사항)
+                FitImageToScreen();
+            }
             */
-
         }
 
         private void ZoomBorder_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            // 왼쪽 버튼 클릭
-            if (e.ChangedButton == MouseButton.Left && ImgView.Source != null)
-            {
-                Point mousePos = e.GetPosition(ImgView);
-                var bitmap = ImgView.Source as BitmapSource;
-
-                // [수정완료] 기존 vm.SelectedAlgorithm 체크 로직을 제거하고 DrawingMode로 통일
-
-                // 1. ROI 그리기 모드
-                if (_currentDrawMode == DrawingMode.Roi)
-                {
-                    // 이미지 내부인지 확인
-                    if (mousePos.X >= 0 && mousePos.X < bitmap.PixelWidth && mousePos.Y >= 0 && mousePos.Y < bitmap.PixelHeight)
-                    {
-                        _isRoiDrawing = true;
-                        _roiStartPoint = mousePos;
-
-                        RoiRect.Visibility = Visibility.Visible;
-                        RoiRect.Width = 0;
-                        RoiRect.Height = 0;
-                        UpdateRoiVisual(mousePos, mousePos);
-                        ImgCanvas.CaptureMouse();
-                    }
-                }
-                // 2. 다른 도형 그리기 모드
-                else if (_currentDrawMode != DrawingMode.None)
-                {
-                    _drawStartPoint = mousePos;
-
-                    if (_currentDrawMode == DrawingMode.Line)
-                    {
-                        _tempShape = new Line
-                        {
-                            Stroke = Brushes.Yellow,
-                            StrokeThickness = 2,
-                            X1 = _drawStartPoint.X,
-                            Y1 = _drawStartPoint.Y,
-                            X2 = _drawStartPoint.X,
-                            Y2 = _drawStartPoint.Y
-                        };
-                    }
-                    else if (_currentDrawMode == DrawingMode.Circle)
-                    {
-                        _tempShape = new Ellipse
-                        {
-                            Stroke = Brushes.Lime,
-                            StrokeThickness = 2,
-                            Width = 0,
-                            Height = 0
-                        };
-                        Canvas.SetLeft(_tempShape, _drawStartPoint.X);
-                        Canvas.SetTop(_tempShape, _drawStartPoint.Y);
-                    }
-                    else if (_currentDrawMode == DrawingMode.Rectangle)
-                    {
-                        _tempShape = new Rectangle
-                        {
-                            Stroke = Brushes.Cyan,
-                            StrokeThickness = 2,
-                            Width = 0,
-                            Height = 0
-                        };
-                        Canvas.SetLeft(_tempShape, _drawStartPoint.X);
-                        Canvas.SetTop(_tempShape, _drawStartPoint.Y);
-                    }
-
-                    if (_tempShape != null)
-                    {
-                        OverlayCanvas.Children.Add(_tempShape);
-                        ZoomBorder.CaptureMouse();
-                    }
-                }
-            }
-            // 가운데 버튼 (이동)
-            else if (e.ChangedButton == MouseButton.Middle && ImgView.Source != null)
-            {
-                var border = sender as Border;
-                border.CaptureMouse();
-                _start = e.GetPosition(border);
-                _origin = new Point(imgTranslate.X, imgTranslate.Y);
-                _isDragging = true;
-                Cursor = Cursors.SizeAll;
-            }
-
-
-            /*
             var vm = this.DataContext as MainViewModel;
 
             // ROI 모드이고, 왼쪽 버튼 클릭 시 -> 그리기 시작
@@ -490,7 +390,6 @@ namespace IndyVision
             //{
             //    FitImageToScreen();
             //}
-            */
         }
 
         private void ZoomBorder_MouseUp(object sender, MouseButtonEventArgs e)
@@ -658,10 +557,5 @@ namespace IndyVision
             FitImageToScreen();
         }
 
-        private void Menu_DrawRoi_Click(object sender, RoutedEventArgs e)
-        {
-            _currentDrawMode = DrawingMode.Roi;
-            Cursor = Cursors.Cross;
-        }
     }
 }

@@ -76,51 +76,92 @@ namespace IndyVision
         // 3. 프로그램 시작 시 화면 맞춤 실행
         private void ZoomBorder_Loaded(object sender, RoutedEventArgs e)
         {
+            // ZoomBorder_Loaded 이벤트는 컨트롤이 막 로드 되는 시점에 발생.
+            // 화면의 크기나 레이아웃 계산이 완벽하게 끝나지 않을 수있으므로, 
+            // FitImageToScreen()을 즉시 실행하면 잘못된 크기로 계산되거나, 화면 갱신이 되지 않기 때문에
+            // 화면 렌더링이 완전히 끝이난 후 안전한 타이밍에 이미지를 화면에 맞추기 위해 비동기적으로 
+            // 화면 그리기나 다른 급한 일들이 모두 끝나고 UI 쓰레드가 한가할때 실행해 달라는 의미.
             Dispatcher.InvokeAsync(() => FitImageToScreen(), DispatcherPriority.ContextIdle);
         }
 
+
         // ---------------------------------------------------------
         // [화면 맞춤 함수] (디버깅 코드 제거됨)
-        // 이미지를 화면 중앙에 예쁘게 맞추는 수학 계산
+        // 이미지를 화면 크기에 맞춰서(Fit), 여백을 조금 두고(95%), 정중앙에 배치.
+        // 1. 현재 화면과 이미지 크기를 잽니다.
+        // 2. 가로/세로 비율 중 더 많이 줄여야 하는 쪽을 기준으로 배율을 정합니다.
+        // 3. 이미지가 화면보다 작으면 굳이 늘리지 않습니다.
+        // 4. 보기 좋게 95% 크기로 살짝 줄입니다.
+        // 5. 화면 정중아으로 이동.
         // ---------------------------------------------------------
         public void FitImageToScreen()
         {
-            // 화면 강제 갱신 (현재 크기를 정확히 알기 위해)
+            /*
+             * 레이 아웃 강제 업데이트
+             * WPF는 레이아웃 변경을 즉시 반영하지 않고 나중에 한꺼번에 처리하는 경우가 있습니다.
+             * 하지만 지금 당장 정확한 화면 크기(ActualWidth/Height)를 알아야 하기 때문에,
+             * 강제로 지금 당장 화면을 갱신해라고 명령하여 최신 크기 값을 가져옵니다.
+             */
             ZoomBorder.UpdateLayout();
             ImgView.UpdateLayout();
 
+            /*
+             * [2] 예외 상황 체크 (방어 코드)
+             * 1. 이미지가 아직 로드되지 않았거나 (ImgView.Source == null)
+             * 2. 이미지를 감싸는 테두리(ZoomBorder)의 너비나 높이가 0이라면 (아직 화면에 안 떴거나 최소화된 상태)
+             * 계산을 할 수 없으므로 그냥 함수를 종료합니다.
+             */
             if (ImgView.Source == null || ZoomBorder.ActualWidth == 0 || ZoomBorder.ActualHeight == 0)
                 return;
 
+            // [3] 이미지 소스 가져오기
+            // ImgView에 있는 이미지를 BitmapSource 형태로 가져옵니다.
+            // 이렇게 해야 이미지의 실제 픽셀 크기(Width, Height)를 알 수 있습니다.
             var imageSource = ImgView.Source as BitmapSource;
-            // [중요] DPI 호환성을 위해 Width 사용
+
+            // [4] 이미지 유효성 체크
+            // 이미지가 없거나 크기가 0인 비정상 이미지라면 함수를 종료합니다.
             if (imageSource == null || imageSource.Width == 0 || imageSource.Height == 0) return;
 
-            // [초기화] 확대/이동 상태를 리셋합니다.
+            // [5] 변환 초기화 (Reset)
+            // 기존에 적용되어 있던 확대/이동 값을 모두 초기화합니다.
+            // ScaleX, ScaleY = 1.0 (1배율, 원본 크기)
+            // TranslateX, TranslateY = 0 (이동 없음, 원점)
             imgScale.ScaleX = 1.0;      // 배율 1배
             imgScale.ScaleY = 1.0;
             imgTranslate.X = 0;         // 위치 0,0
             imgTranslate.Y = 0;
 
-            // [배율 계산] 화면 너비/이미지 너비 비율을 계산합니다.
+            // [6] 배율 계산 (Scale Factor Calculation)
+            // 화면 너비 대비 이미지 너비의 비율 (scaleX)
+            // 화면 높이 대비 이미지 높이의 비율 (scaleY)
+            // 예: 화면 1000px / 이미지 2000px = 0.5 (절반으로 줄여야 함)
             double scaleX = ZoomBorder.ActualWidth / imageSource.Width;
             double scaleY = ZoomBorder.ActualHeight / imageSource.Height;
 
-            // 가로/세로 중 더 작은 비율을 선택해야 이미지가 잘리지 않고 다 들어옵니다.
+            // [7] 최종 배율 결정 (Min 함수 사용)
+            // 가로 비율과 세로 비율 중 '더 작은 값'을 선택합니다.
+            // 그래야 이미지가 화면 밖으로 잘리지 않고 전체가 다 들어옵니다 (Letterboxing 방식).
             double scale = Math.Min(scaleX, scaleY);
 
-            // 이미지가 화면보다 작아도 억지로 늘리지 않음 (1배 유지)
+            // [8] 확대 금지 (Optional)
+            // 계산된 배율이 1.0보다 크다면(즉, 이미지가 화면보다 작아서 확대해야 한다면),
+            // 억지로 늘리지 않고 1.0(원본 크기)으로 고정합니다. (이미지 깨짐 방지)
             if (scale > 1.0) scale = 1.0; // 확대 금지
 
-            // [적용] 계산된 배율을 적용하되, 꽉 차지 않게 95%만 씁니다. (여백 미)
+            // [9] 여백 주기 (95%)
+            // 화면에 너무 꽉 차면 답답해 보일 수 있으므로,
+            // 계산된 크기의 95%만 사용하여 약간의 여백을 둡니다.
             imgScale.ScaleX = scale * 0.95;
             imgScale.ScaleY = scale * 0.95;
 
-            // [중앙 정렬] 화면 중앙에 오도록 위치 계산
-            // (화면너비 - 줄어든이미지너비) / 2 = 왼쪽 여백
+            // [10] 중앙 정렬을 위한 위치 계산
+            // 최종적으로 줄어든 이미지의 너비와 높이를 계산합니다.
             double finalWidth = imageSource.Width * imgScale.ScaleX;
             double finalHeight = imageSource.Height * imgScale.ScaleY;
 
+            // (화면 너비 - 이미지 너비) / 2 공식을 사용하여
+            // 남은 여백의 절반만큼 이동시키면 정중앙에 위치하게 됩니다.
             imgTranslate.X = (ZoomBorder.ActualWidth - finalWidth) / 2;
             imgTranslate.Y = (ZoomBorder.ActualHeight - finalHeight) / 2;
 
@@ -177,6 +218,11 @@ namespace IndyVision
             }
             else if (_currentDrawMode != DrawingMode.None && _tempShape != null && e.LeftButton == MouseButtonState.Pressed)
             {
+                // 화면상의 마우스 좌표를 실제 원본 이미지의 픽셀 좌표로 변환하기 위해 e.GetPosition(ImgView) 사용.
+                // 만약 e.GetPosition(this) or e.GetPosition(ZoomBorder)를 사용하면, 윈도우 기준 또는 테두리 기준이 되어
+                // 이미지가 확대되었을 때 화면상의 좌표만 구해짐.
+                // WPF 내부적으로 현재 적용된 확대비율과 이동거리를 역으로 계산해서, 사용자가 클릭한 곳이 원본 이미지의 몇 번째 픽셀인지
+                // 정확한 좌표를 반환해 줌.
                 Point currentPos = e.GetPosition(ImgView);  // 이미지 기준 좌표.
 
                 if(_currentDrawMode == DrawingMode.Line)
@@ -269,13 +315,26 @@ namespace IndyVision
             }
             else
             {
+                // this.FindResource("DrawContextMenu") as Context 코드는 WPF에서 리소스에 정의된 특정 객체를 코드에서 찾아오는 방법.
+                // this : 현재 코드가 실행되고 있는 클래싀 인스턴스를 의미.
+                // WPF 가 제공하는 메서드로, 내 부모님의 주머니를 뒤져서 특정 이름(key)를 가진 물건을 찾아와라.
+                // FindResource 메서드는 어떤 객체를 찾을 지 모르기 때문에 가장 범용적인 object 형태로 변환합니다.
+                // 만약 찾는다면, as ContextMenu는 이미 알고 있는 ContextMenu 타입으로 취급(형변환) 해달라는 것.
                 ContextMenu menu = this.FindResource("DrawingContextMenu") as ContextMenu;
                 //ContextMenu menu = this.Resources["DrawingContextMenu"] as ContextMenu;
                 if (menu != null)
                 {
+                    // 우클릭 메뉴(ContextMenu)가 화면 어디에 나타날지 결정하는 기준 설정.
+                    // PlacementTarget: 메뉴를 어디에 붙일 것인가 정하는 속성. (이 값을 설정하지 않으면 메뉴가 화면에 안보일수 있음)
+                    //  이 값을 설정하면, 메뉴가 해당 컨트롤의 바로 옆이나 위에 나타나게 됨.
+                    // sender : 이벤트를 발생시킨 주인공으로 우클릭을 당한 ZoomBorder가 됨.
+                    //  sender 는 기본적으로 object 타입이라, 이것을 화면에 표시되는 요소인 UIElement 로 형변환 시켜 줌.
+                    // "이 메뉴(menu)를 띄울때, 기준 위치를 지금 우클릭된 녀석(sender)으로 삼아라.
                     menu.PlacementTarget = sender as UIElement;
                     menu.IsOpen = true;
                 }
+                // 이벤트를 "여기서 처리 완료했다"고 표시하여, 더 이상 이벤트가 부모 요소나 다른 핸들러로 전파되는 것을 막는 역할.
+                // "내가 의도한 팝업 메뉴를 띄웠으니, 더 이상 다른 우클릭 관련 동작은 하지 마라"**라고 시스템에 알리는 것
                 e.Handled = true;
             }
 
@@ -321,6 +380,17 @@ namespace IndyVision
                         RoiRect.Width = 0;
                         RoiRect.Height = 0;
                         UpdateRoiVisual(mousePos, mousePos);
+
+                        /*
+                         * Mouse 이벤트를 ImgCanvas 컨트롤이 독점하도록 강제.
+                         * 그리기 프로그램이나, 드래그 기능에 필수적인 기능으로, 
+                         * 상황: 사용자가 사각형(ROI)을 그리기 위해 마우스를 클릭한 상태로 드래그하다가, 실수로 이미지 영역 밖으로 마우스가 나가는 경우가 자주 발생합니다.
+                         * 이 코드가 없다면: 마우스가 영역 밖으로 나가는 순간, ImgCanvas는 더 이상 "마우스가 움직이고 있다"는 사실을 모르게 됩니다. 
+                         * 결과적으로 사각형 그리기가 뚝 끊기거나, 마우스 버튼을 떼도 그리기 모드가 종료되지 않는 버그가 발생합니다.
+                         * 이 코드가 있으면: 마우스가 모니터 끝까지 가더라도 ImgCanvas는 계속해서 "아, 아직 드래그 중이구나"라고 인식하고 사각형 크기를 계속 조절할 수 있게 됩니다.
+                         * 마우스를 납치했으면, 일이 끝났을 때 반드시 놓아줘야 합니다. 
+                         * 그래서 MouseUp (마우스 버튼을 뗄 때) 이벤트에는 항상 ImgCavas.ReleaseMouseCapture(); 코드가 쌍으로 사용.
+                         */
                         ImgCanvas.CaptureMouse();
                     }
                 }
@@ -383,114 +453,6 @@ namespace IndyVision
                 _isDragging = true;
                 Cursor = Cursors.SizeAll;
             }
-
-
-            /*
-            var vm = this.DataContext as MainViewModel;
-
-            // ROI 모드이고, 왼쪽 버튼 클릭 시 -> 그리기 시작
-            if (vm != null && vm.SelectedAlgorithm != null &&
-                vm.SelectedAlgorithm.Contains("ROI") &&
-                e.ChangedButton == MouseButton.Left &&
-                ImgView.Source != null)
-            {
-                // 이미지 기준 좌표 계산
-                Point mousePos = e.GetPosition(ImgView);    // 클릭한 위치(이미지 기준)를 가져옵니다.
-                var bitmap = ImgView.Source as BitmapSource;
-
-                // 이미지 내부인지 확인
-                if (mousePos.X >= 0 && mousePos.X < bitmap.PixelWidth && mousePos.Y >= 0 && mousePos.Y < bitmap.PixelHeight)
-                {
-                    _isRoiDrawing = true;       // 지금부터 그린다 표시.
-                    _roiStartPoint = mousePos;  // 시작점 저장.
-
-                    // 사각형 초기화 및 표시
-                    RoiRect.Visibility = Visibility.Visible;    // 빨깐 사각형을 보이게 함.
-                    // 처음에는 크기가 0
-                    RoiRect.Width = 0;
-                    RoiRect.Height = 0;
-
-                    // 캔버스상 위치 설정을 위해 랜더링 변환 적용. (줌/이동 고려)
-                    UpdateRoiVisual(mousePos, mousePos);
-
-                    // 마우스 캡쳐 (밖으로 나가도 이벤트 받기 위해)
-                    ImgCanvas.CaptureMouse();
-                }
-            }
-            // 도형 그리기 모드
-            else if (_currentDrawMode != DrawingMode.None && e.ChangedButton == MouseButton.Left && ImgView.Source != null)
-            {
-                _drawStartPoint = e.GetPosition(ImgView);   // 이미지 기준 좌표.
-
-                // 도형 생성
-                if (_currentDrawMode == DrawingMode.Line)
-                {
-                    _tempShape = new Line
-                    {
-                        Stroke = Brushes.Yellow,
-                        StrokeThickness = 2,
-                        X1 = _drawStartPoint.X,
-                        Y1 = _drawStartPoint.Y,
-                        X2 = _drawStartPoint.X,
-                        Y2 = _drawStartPoint.Y
-                    };
-                }
-                else if (_currentDrawMode == DrawingMode.Circle)
-                {
-                    _tempShape = new Ellipse
-                    {
-                        Stroke = Brushes.Lime,
-                        StrokeThickness = 2,
-                        Width = 0,
-                        Height = 0,
-                    };
-
-                    Canvas.SetLeft(_tempShape, _drawStartPoint.X);
-                    Canvas.SetTop(_tempShape, _drawStartPoint.Y);
-                }
-                else if (_currentDrawMode == DrawingMode.Rectangle)
-                {
-                    _tempShape = new Rectangle
-                    {
-                        Stroke = Brushes.Cyan,
-                        StrokeThickness = 2,
-                        Width = 0,
-                        Height = 0,
-                    };
-
-                    Canvas.SetLeft(_tempShape, _drawStartPoint.X);
-                    Canvas.SetTop(_tempShape, _drawStartPoint.Y);
-                }
-
-                // OverlayCanvas에 추가 (Zoom/Pan 자동 적용됨)
-                if (_tempShape != null)
-                {
-                    OverlayCanvas.Children.Add(_tempShape);
-                    ZoomBorder.CaptureMouse();  // 마우스 이탈 방지.
-                }
-            }
-
-
-            // 가운데 버튼(휠 클릭)인지 확인
-            else if (e.ChangedButton == MouseButton.Middle && ImgView.Source != null)
-            {
-                var border = sender as Border;
-                border.CaptureMouse();          // 마우스 납치
-
-                _start = e.GetPosition(border); // 드래그 시작 위치 저장.
-                _origin = new Point(imgTranslate.X, imgTranslate.Y);    // 현재 이미지 위치 저장
-                _isDragging = true;             // "이동 중!" 표시
-
-                // 커서를 이동 모양(십자 화살표)으로 변경하여 드래그 중임을 표시
-                Cursor = Cursors.SizeAll;
-            }
-
-            // (옵션) 우클릭 시 화면 맞춤 기능 유지
-            //if (e.ChangedButton == MouseButton.Right && _isRoiDrawing == false) 
-            //{
-            //    FitImageToScreen();
-            //}
-            */
         }
 
         private void ZoomBorder_MouseUp(object sender, MouseButtonEventArgs e)

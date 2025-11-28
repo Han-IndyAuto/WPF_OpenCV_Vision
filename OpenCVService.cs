@@ -17,11 +17,14 @@ namespace IndyVision
         private Mat _destImage;  // 처리용
 
         // 화면 표시용 캐시
+        // 화면(UI)에 보여주기 위한 WPF 전용 이미지 객체 (캐시)
         private ImageSource _cachedOriginal;
         private ImageSource _cachedProcessed;
 
         // GMF(패턴 매칭) 모델 이미지
         private Mat _modelImage;
+
+        // 현재 모델을 등록/설정 중인지 여부를 나타내는 플래그
         public bool IsModelDefinitionMode { get; private set; } = false;
 
 
@@ -47,6 +50,8 @@ namespace IndyVision
             _destImage = _srcImage.Clone();
 
             // 3. 화면 표시용 비트맵 생성
+            // ToWriteableBitmap(): OpenCvSharp.WpfExtensions에 있는 기능으로, 
+            // OpenCV의 Mat 데이터를 WPF Image 컨트롤이 이해할 수 있는 포맷으로 변환합니다.
             _cachedOriginal = _srcImage.ToWriteableBitmap();
             _cachedProcessed = _destImage.ToWriteableBitmap();
 
@@ -78,12 +83,17 @@ namespace IndyVision
                     if(parameters is ThresholdParams thParams)
                     {
                         // 컬러 -> 그레이 스케일 변환 필수
-                        using(Mat gray = new Mat())
+                        // using 블록: gray 변수는 이 블록이 끝나면 즉시 메모리 해제됨
+                        using (Mat gray = new Mat())
                         {
                             Cv2.CvtColor(_srcImage, gray, ColorConversionCodes.BGR2GRAY);
+
                             // MIL: MimBinarize(Range) -> OpenCV: InRange 또는 Threshold
                             // 여기서는 범위 이진화를 위해 InRange 사용
                             // 스칼라 값: (Lower, Upper)
+                            // Cv2.InRange(입력, 하한값, 상한값, 출력)
+                            // - 픽셀값이 하한(ThresholdValue) ~ 상한(ThresholdMax) 사이면 흰색(255), 아니면 검은색(0)으로 만듭니다.
+                            // - 특정 밝기 영역만 추출할 때 유용합니다.
                             Cv2.InRange(gray, new Scalar(thParams.ThresholdValue), new Scalar(thParams.ThresholdMax), _destImage);
                         }
                     }
@@ -130,24 +140,36 @@ namespace IndyVision
                             }
                             else // Sobel (Prewitt는 OpenCV 기본 함수에 없으므로 Sobel로 대체)
                             {
+                                // using 블록은 **"이 블록 안에서만 이 객체를 사용하고, 블록이 끝나면 즉시 폐기(Dispose)해라"**라는 의미
+                                // 이미지 처리용 임시 변수(Mat)들은 용량이 크기 때문에,
+                                // using을 사용하여 **"다 썼으면 바로바로 버려라"**라고 명시하는 것이며,
+                                // 여러 줄을 겹쳐 쓰는 것은 코드를 깔끔하게 유지하면서 한꺼번에 관리하기 위함
+                                // 소벨: 1차 미분을 이용. X축, Y축 각각 구해서 합침.
                                 using (Mat gradX = new Mat())
                                 using (Mat gradY = new Mat())
                                 using (Mat absX = new Mat())
                                 using (Mat absY = new Mat())
                                 {
                                     // X, Y 방향 미분
+                                    // 1. X방향 미분(dx = 1, dy = 0)
+                                    // MatType.CV_16S: 미분 값은 음수가 나올 수 있으므로 16비트 정수형(Signed)을 사용해야 함.
+                                    // 그냥 8비트를 쓰면 음수 값이 0으로 잘려서 정보가 손실됨.
                                     Cv2.Sobel(gray, gradX, MatType.CV_16S, 1, 0, 3);
                                     Cv2.Sobel(gray, gradY, MatType.CV_16S, 0, 1, 3);
 
+                                    // **"계산용 데이터(음수 포함 16비트)를 눈으로 볼 수 있는 그림(양수 전용 8비트)으로 변환"**하여,
+                                    // "변화의 방향(양/음)은 무시하고 변화의 강도(엣지)만 남기는" 필수적인 과정
                                     Cv2.ConvertScaleAbs(gradX, absX);
                                     Cv2.ConvertScaleAbs(gradY, absY);
 
+                                    // 4. 두 방향 합치기 (가중치 0.5씩 줘서 평균)
                                     Cv2.AddWeighted(absX, 0.5, absY, 0.5, 0, _destImage);
                                 }
                             }
                         }
 
                         // 엣지 강도 필터링 (Smoothness 활용)
+                        // 사용자가 설정한 부드러움(Smoothness) 값보다 약한 엣지는 지웁니다.
                         if (edgeParams.Smoothness > 0)
                         {
                             Cv2.Threshold(_destImage, _destImage, edgeParams.Smoothness, 255, ThresholdTypes.Binary);
@@ -162,13 +184,18 @@ namespace IndyVision
                         {
                             Cv2.CvtColor(_srcImage, gray, ColorConversionCodes.BGR2GRAY);
 
+                            // 적응형 방식: 평균(MeanC) 또는 가우시안(GaussianC)
                             AdaptiveThresholdTypes adaptType = AdaptiveThresholdTypes.MeanC; // 또는 GaussianC
+                            // 모드: 밝은 물체를 찾을지(Binary), 어두운 물체를 찾을지(BinaryInv)
                             ThresholdTypes thType = adaptParams.Mode.Contains("Bright") ? ThresholdTypes.Binary : ThresholdTypes.BinaryInv;
 
                             // BlockSize는 반드시 홀수
                             int blockSize = adaptParams.WindowSize % 2 == 0 ? adaptParams.WindowSize + 1 : adaptParams.WindowSize;
                             if (blockSize < 3) blockSize = 3;
 
+                            // Cv2.AdaptiveThreshold(입력, 출력, 최대값, 적응형메서드, 임계타입, 블록크기, 상수C)
+                            // - 이미지를 작은 블록으로 나누어 각 구역마다 다른 임계값을 적용합니다.
+                            // - 조명이 불균일한 이미지에서 효과적입니다.
                             Cv2.AdaptiveThreshold(gray, _destImage, 255, adaptType, thType, blockSize, adaptParams.Offset);
                         }
                     }
@@ -177,61 +204,92 @@ namespace IndyVision
                 case "Blob Analysis (블롭 분석)":
                     if (parameters is BlobParams blobParams)
                     {
-                        // 1. 전처리: 이진화
-                        Mat binary = new Mat();
-                        using (Mat gray = new Mat())
+                        // [수정됨] 안전한 자원 해제를 위해 모든 Mat 객체를 using으로 감쌉니다.
+                        // 이렇게 하면 에러가 발생해도 using 블록을 나갈 때 자동으로 Dispose()가 호출되어 메모리 누수를 방지합니다.
+                        using (Mat labels = new Mat())      // 각 픽셀의 라벨 번호가 저장될 행렬
+                        using (Mat stats = new Mat())       // 각 덩어리의 통계 정보 (x, y, w, h, 면적), stats: [x, y, width, height, area]
+                        using (Mat centroids = new Mat())   // 각 덩어리의 중심 좌표 (cx, cy)
+                        using (Mat binary = new Mat())
                         {
-                            Cv2.CvtColor(_srcImage, gray, ColorConversionCodes.BGR2GRAY);
-                            Cv2.InRange(gray, new Scalar(blobParams.ThresholdMin), new Scalar(blobParams.ThresholdMax), binary);
-                        }
 
-                        // 2. 레이블링 (Connected Components)
-                        // stats: [x, y, width, height, area]
-                        // centroids: [cx, cy]
-                        Mat labels = new Mat();
-                        Mat stats = new Mat();
-                        Mat centroids = new Mat();
-
-                        int labelCount = Cv2.ConnectedComponentsWithStats(binary, labels, stats, centroids);
-
-                        // 3. 결과 그리기 (컬러 변환)
-                        Cv2.CvtColor(binary, _destImage, ColorConversionCodes.GRAY2BGR);
-
-                        int validCount = 0;
-                        // 라벨 0은 배경이므로 1부터 시작
-                        for (int i = 1; i < labelCount; i++)
-                        {
-                            int area = stats.At<int>(i, 4);
-                            if (area >= blobParams.MinArea)
+                            // 1. 전처리: 이진화
+                            //Mat binary = new Mat();
+                            using (Mat gray = new Mat())
                             {
-                                validCount++;
-                                if (blobParams.DrawBox)
+                                Cv2.CvtColor(_srcImage, gray, ColorConversionCodes.BGR2GRAY);
+                                Cv2.InRange(gray, new Scalar(blobParams.ThresholdMin), new Scalar(blobParams.ThresholdMax), binary);
+
+                                // 체크박스가 켜져 있다면(Invert == true), 흰색과 검은색을 뒤집습니다.
+                                // 예: 흰 배경에 검은 글씨 -> 배경을 잡고 반전시키면 글씨가 흰색이 되어 검출됨.
+                                if (blobParams.Invert)
                                 {
-                                    int x = stats.At<int>(i, 0);
-                                    int y = stats.At<int>(i, 1);
-                                    int w = stats.At<int>(i, 2);
-                                    int h = stats.At<int>(i, 3);
-
-                                    // 빨간 박스
-                                    Cv2.Rectangle(_destImage, new Rect(x, y, w, h), Scalar.Red, 2);
-
-                                    // 파란 점 (중심)
-                                    int cx = (int)centroids.At<double>(i, 0);
-                                    int cy = (int)centroids.At<double>(i, 1);
-                                    Cv2.Circle(_destImage, cx, cy, 3, Scalar.Blue, -1);
-
-                                    // 텍스트
-                                    Cv2.PutText(_destImage, $"A:{area}", new Point(x, y - 5), HersheyFonts.HersheySimplex, 0.5, Scalar.Green, 1);
+                                    Cv2.BitwiseNot(binary, binary);
                                 }
                             }
+
+                            // 2. 레이블링 (Connected Components)
+                            // stats: [x, y, width, height, area]
+                            // centroids: [cx, cy]
+                            //Mat labels = new Mat();     // 각 픽셀의 라벨 번호가 저장될 행렬
+                            //Mat stats = new Mat();      // 각 덩어리의 통계 정보 (x, y, w, h, 면적)
+                            //Mat centroids = new Mat();  // 각 덩어리의 중심 좌표 (cx, cy)
+
+                            // 반환값: 찾은 라벨(덩어리)의 총 개수 (배경 포함)
+                            // 이진화된 이미지에서 연결된 객체(Blob)를 찾아 라벨링하고,
+                            // 각 객체의 통계 정보(위치, 크기, 면적)와 중심점을 한 번에 계산해주는 매우 유용한 함수.
+                            /*
+                             int labelCount = Cv2.ConnectedComponentsWithStats(
+                                            InputArray image,       // 입력 이미지 (binary)
+                                            OutputArray labels,     // 라벨맵 출력 (labels)
+                                            OutputArray stats,      // 통계 정보 출력 (stats)
+                                            OutputArray centroids,  // 중심점 출력 (centroids)
+                                            PixelConnectivity connectivity = PixelConnectivity.Connectivity8, // (기본값) 연결성
+                                            int ltype = MatType.CV_32S // (기본값) 라벨 자료형
+                                            );
+                             */
+                            int labelCount = Cv2.ConnectedComponentsWithStats(binary, labels, stats, centroids);
+
+                            // 3. 결과 그리기 (컬러 변환)
+                            Cv2.CvtColor(binary, _destImage, ColorConversionCodes.GRAY2BGR);
+
+                            int validCount = 0;
+                            // 라벨 0은 배경이므로 1부터 시작
+                            for (int i = 1; i < labelCount; i++)
+                            {
+                                int area = stats.At<int>(i, 4); // stats 행렬에서 면적(Area) 정보 가져오기 [컬럼 인덱스 4]
+                                if (area >= blobParams.MinArea)
+                                {
+                                    validCount++;
+                                    if (blobParams.DrawBox)
+                                    {
+                                        int x = stats.At<int>(i, 0);    // Left
+                                        int y = stats.At<int>(i, 1);    // Top
+                                        int w = stats.At<int>(i, 2);    // Width
+                                        int h = stats.At<int>(i, 3);    // Height
+
+                                        // 빨간 박스
+                                        Cv2.Rectangle(_destImage, new Rect(x, y, w, h), Scalar.Red, 2);
+
+                                        // 파란 점 (중심)
+                                        // 중심점(Centroid) 가져오기
+                                        int cx = (int)centroids.At<double>(i, 0);   // X 좌표
+                                        int cy = (int)centroids.At<double>(i, 1);   // Y 좌표
+                                        Cv2.Circle(_destImage, cx, cy, 3, Scalar.Blue, -1);
+
+                                        // 텍스트
+                                        Cv2.PutText(_destImage, $"A:{area}", new Point(x, y - 5), HersheyFonts.HersheySimplex, 0.5, Scalar.Green, 1);
+                                    }
+                                }
+                            }
+
+                            resultMessage = $"검출 성공: {validCount}개 (전체 {labelCount - 1}개 중)";
                         }
 
-                        resultMessage = $"검출 성공: {validCount}개 (전체 {labelCount - 1}개 중)";
-
-                        binary.Dispose();
-                        labels.Dispose();
-                        stats.Dispose();
-                        centroids.Dispose();
+                        // 4. using 블록 끝나면 자동 Dispose()
+                        //binary.Dispose();
+                        //labels.Dispose();
+                        //stats.Dispose();
+                        //centroids.Dispose();
                     }
                     break;
 
@@ -505,6 +563,9 @@ namespace IndyVision
 
                 double thresh1 = 0;
                 double thresh2 = 0;
+
+                /*
+                 * Original Code:
                 if (param is GmfParams)
                 {
                     GmfParams Gmp = param as GmfParams;
@@ -517,10 +578,20 @@ namespace IndyVision
                     thresh1 = Tmp.Smoothness;
                     thresh2 = Tmp.Smoothness * 2;
                 }
+                */
 
-                    // Canny Edge
-                    //double thresh1 = param.Smoothness;
-                    //double thresh2 = param.Smoothness * 2;
+                // 파라미터 타입에 따라 임계값 설정
+                // C# 패턴 매칭에 따른 변수 선언 및 할당
+                double smoothness = 0;
+                if (param is GmfParams gmf) smoothness = gmf.Smoothness;
+                else if (param is TemplateMatchParams tm) smoothness = tm.Smoothness;
+
+                thresh1 = smoothness;
+                thresh2 = smoothness * 2;
+
+                // Canny Edge
+                //double thresh1 = param.Smoothness;
+                //double thresh2 = param.Smoothness * 2;
                 Cv2.Canny(gray, edges, thresh1, thresh2);
 
                 _destImage.SetTo(Scalar.Lime, edges);

@@ -11,6 +11,10 @@
 ### 2. 진행 내용
 - 이미지 로드 후 Gray 처리 알고리즘 처리에서 Gray 변경 알고리즘 추가.
 - Custom Title bar 적용하고, Window Title bar 를 제거. (UI 수정 및 UI 동작 코드 수정)
+- Blob 분석 코드 수정. (label, stats, centroids, binary 의 Mat 데이터를 Using문으로 감싸서 메모리 누수 방지)
+- Blob 분석은 배경이 검은색, 전경이 흰색인 물체를 분석하는 알고리즘으로 Wafer Die 이미지의 경우 반대로 배경이 흰색, 전경이 검은색이기 때문에 Invert 알고리즘을 추가하여 분석 가능하도록 수정.
+- UI 구문에 Blob CheckBox 추가.
+- PreviewModel 함수내에 C# pattern matching으로 변수 선언 및 할당으로 수정.
 
 ---
 

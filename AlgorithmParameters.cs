@@ -196,6 +196,21 @@ namespace IndyVision
             set { if (_thresholdMax != value) { _thresholdMax = value; OnPropertyChanged(); } }
         }
 
+        // [추가] 이진화 반전 옵션 (흰 배경에 검은 물체 검출 시 사용)
+        private bool _invert = false;
+        public bool Invert
+        {
+            get => _invert;
+            set
+            {
+                if (_invert != value)
+                {
+                    _invert = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         // 최소 면적(픽셀 수): 이 값보다 작은 덩어리는 무시.
         private int _minArea = 100;
         public int MinArea

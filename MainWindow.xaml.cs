@@ -79,6 +79,7 @@ namespace IndyVision
 
             if (this.WindowState == WindowState.Maximized)
             {
+                // WindowKey + . 를 눌렀을 때 아이콘을 선택하여 넣을 수 있음.
                 MaximizeButton.Content = "❐"; // 복원 아이콘 (겹친 네모)
                 MaximizeButton.ToolTip = "Restore Down";
             }

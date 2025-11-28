@@ -66,6 +66,14 @@ namespace IndyVision
             // 알고리즘 처리
             switch(algorithm)
             {
+                case "Gray 처리":
+                    if (_srcImage.Channels() == 1) return "This Image is Gray Image.";
+                    else
+                    {
+                        Cv2.CvtColor(_srcImage, _destImage, ColorConversionCodes.BGR2GRAY);
+                        resultMessage = "Image Convert Completed to Gray-Image";
+                    }
+                    break;
                 case "Threshold (이진화)":
                     if(parameters is ThresholdParams thParams)
                     {

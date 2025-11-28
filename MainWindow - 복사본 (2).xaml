@@ -9,10 +9,10 @@
         Title="MainWindow" Height="768" Width="1280"
         Closing="Window_Closing"
         
-        WindowStyle="SingleBorderWindow"
-        ResizeMode="CanResize"
-        AllowsTransparency="False"
-        Background="#F0F0F0" >
+        WindowStyle="None"
+        ResizeMode="CanResizeWithGrip"
+        AllowsTransparency="True"
+        Background="Transparent" >
 
     <!-- 
          [Window 속성 변경] 
@@ -22,54 +22,8 @@
          Background="Transparent": 윈도우 자체 배경 투명
     -->
 
-    <WindowChrome.WindowChrome>
-        <!-- [WindowChrome 설정] -->
-        <!-- CaptionHeight: 타이틀바 영역 높이 (이 영역에서 드래그 가능) -->
-        <!-- GlassFrameThickness: 그림자 효과 등 -->
-        <WindowChrome CaptionHeight="40"
-                      GlassFrameThickness="0"
-                      CornerRadius="0"
-                      ResizeBorderThickness="5" />
-    </WindowChrome.WindowChrome>
-    
     <Window.Resources>
-
-        <!-- 버튼 스타일 (마우스 오버 효과 등) -->
-        <Style x:Key="CaptionButtonStyle" TargetType="Button">
-            <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Width" Value="45"/>
-            <Setter Property="Height" Value="40"/>
-            <Setter Property="VerticalAlignment" Value="Top"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#33FFFFFF"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <!-- 닫기 버튼 스타일 (빨간색 효과) -->
-        <Style x:Key="CloseButtonStyle" TargetType="Button" BasedOn="{StaticResource CaptionButtonStyle}">
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#E81123"/>
-                    <Setter Property="Foreground" Value="White"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
+        
         <!-- 그리기 도구 -->
         <ContextMenu x:Key="DrawingContextMenu" >
             <MenuItem Header="Draw Roi (관심 영역)" Click="Menu_DrawRoi_Click" />
@@ -520,47 +474,15 @@
     </Window.DataContext>
 
     <Grid Background="#F0F0F0">
-        <!-- [추가] 최대화 시 창 테두리만큼 마진을 주어 내용 잘림 방지 -->
-        <Grid.Style>
-            <Style TargetType="Grid">
-                <Style.Triggers>
-                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=WindowState}" Value="Maximized">
-                        <Setter Property="Margin" Value="8"/>
-                    </DataTrigger>
-                </Style.Triggers>
-            </Style>
-        </Grid.Style>
-        
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- [커스텀 타이틀바] -->
-        <Grid Grid.Row="0" Background="#104E8B">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- 타이틀 텍스트 -->
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
-                <!-- 아이콘이 있다면 여기에 Image 추가 -->
-                <TextBlock Text="INDY Automation: VISION" Foreground="White" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
-            </StackPanel>
-
-            <!-- 윈도우 제어 버튼 (최소, 최대, 닫기) -->
-            <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <Button Content="_" Style="{StaticResource CaptionButtonStyle}" Click="Minimize_Click" ToolTip="Minimize"/>
-                <Button x:Name="MaximizeButton" Content="□" Style="{StaticResource CaptionButtonStyle}" Click="Maximize_Click" ToolTip="Maximize"/>
-                <Button Content="X" Style="{StaticResource CloseButtonStyle}" Click="Close_Click" ToolTip="Close"/>
-            </StackPanel>
-        </Grid>
-        
-        <!--<Border Background="#104E8B" Padding="10">
+        <Border Background="#104E8B" Padding="10">
             <TextBlock Text="INDY Automation: VISION" Foreground="White" FontSize="18" FontWeight="Bold"/>
-        </Border>-->
+        </Border>
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>

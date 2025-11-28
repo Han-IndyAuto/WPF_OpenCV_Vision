@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -409,12 +410,22 @@ namespace IndyVision
                     return;
                 }
             }
+            else if(SelectedAlgorithm.Contains("Gray"))
+            {
+            }
 
             // 일반 검사 로직 (기존과 동일)
             try
             {
                 // [수정] ProcessImage가 결과를 반환하도록 변경하거나, 호출 후 결과를 받아옴
                 string result = _cvServices.ProcessImage(SelectedAlgorithm, CurrentParameters);
+
+                if(result == "This Image is Gray Image.")
+                {
+                    MessageBox.Show("Gray 영상입니다.", "Gray Image", MessageBoxButton.OK);
+                }
+
+
                 AnalysisResult = result;
 
                 // 처리가 끝났으니 결과를 보여주기 위해 "원본 보기"를 끕니다.

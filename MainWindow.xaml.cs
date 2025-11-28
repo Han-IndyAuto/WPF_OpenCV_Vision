@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -8,6 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
@@ -49,6 +51,42 @@ namespace IndyVision
         public MainWindow()
         {
             InitializeComponent();          // XAML에 그려진 UI 요소들을 메모리에 로드하고 화면에 띄웁니다.
+        }
+
+        private void Minimize_Click(object sender, RoutedEventArgs e)
+        {
+            this.WindowState = WindowState.Minimized;
+        }
+
+        private void Maximize_Click(object sender, RoutedEventArgs e)
+        {
+            if (this.WindowState == WindowState.Maximized)
+                this.WindowState = WindowState.Normal;
+            else
+                this.WindowState = WindowState.Maximized;
+        }
+
+        private void Close_Click(object sender, RoutedEventArgs e)
+        {
+            this.Close();
+        }
+
+        protected override void OnStateChanged(EventArgs e)
+        {
+            base.OnStateChanged(e);
+
+            if (MaximizeButton == null) return;
+
+            if (this.WindowState == WindowState.Maximized)
+            {
+                MaximizeButton.Content = "❐"; // 복원 아이콘 (겹친 네모)
+                MaximizeButton.ToolTip = "Restore Down";
+            }
+            else
+            {
+                MaximizeButton.Content = "□"; // 최대화 아이콘 (네모)
+                MaximizeButton.ToolTip = "Maximize";
+            }
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -625,5 +663,7 @@ namespace IndyVision
             _currentDrawMode = DrawingMode.Roi;
             Cursor = Cursors.Cross;
         }
+
+        
     }
 }

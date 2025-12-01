@@ -688,10 +688,24 @@
 
             <StatusBarItem HorizontalAlignment="Right">
                 <StackPanel Orientation="Horizontal">
+
+                    <!-- [추가] 로딩 바 (IsBusy가 True일 때만 보임) -->
+                    <ProgressBar Width="100" Height="15" IsIndeterminate="True" Margin="0,0,20,0" VerticalAlignment="Center">
+                        <ProgressBar.Style>
+                            <Style TargetType="ProgressBar">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ProgressBar.Style>
+                    </ProgressBar>
+
+
                     <TextBlock Text="{Binding MouseCoordinationInfo}" Margin="0,0,20,0" VerticalAlignment="Center" FontWeight="SemiBold"/>
-
                     <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="0,0,10,0"/>
-
                     <TextBlock Text="리소스 사용량 표시 영역" VerticalAlignment="Center"/>
                 </StackPanel>
             </StatusBarItem>

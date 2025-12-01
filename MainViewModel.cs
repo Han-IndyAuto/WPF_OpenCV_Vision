@@ -27,6 +27,20 @@ namespace IndyVision
 
 
         #region Proerpties
+
+        // 작업 진행 상태를 나타내는 속성. (로딩 바 표시용)
+        private bool _isBusy;
+        public bool IsBusy
+        {
+            get => _isBusy;
+            set
+            {
+                if (_isBusy == value) return;
+                _isBusy = value;
+                OnPropertyChanged();
+            }
+        }
+
         // --- Properties ---
         // 화면에 보여지는 데이터 (Properties)
         // 여기가 MVVM 패턴의 꽃입니다. 데이터가 변하면 화면이 자동으로 바뀝니다.
@@ -366,22 +380,46 @@ namespace IndyVision
 
 
         // [파일 열기] 버튼을 눌렀을 때
-        private void LoadImage(object obj)
+        private async void LoadImage(object obj)
         {
             // 윈도우 파일 탐색기를 엽니다.
             OpenFileDialog dlg = new OpenFileDialog { Filter = "Image Files|*.bmp;*.jpg;*.png" };
             // 파일을 선택하고 확인을 눌렀다면
             if (dlg.ShowDialog() == true)
             {
+                /*
                 // 1. MilService에게 파일을 로드하라고 시킵니다.
                 _cvServices.LoadImage(dlg.FileName);
                 // 2. 막 로드했으니 사용자가 원본을 확인하도록 "원본 보기"를 켭니다.
                 ShowOriginal = true; // 로드 직후엔 원본 보여주기
                 // 3. 화면 갱신
                 UpdateDisplay();
+                */
+
+                try
+                {
+                    IsBusy = true; // 로딩 시작 알림 (UI 프리징 방지)
+                    AnalysisResult = "Loading Image...";
+
+                    // 비동기 함수 호출 (await로 기다림, UI 스레드는 자유로움)
+                    await _cvServices.LoadImageAsync(dlg.FileName);
+
+                    ShowOriginal = true;
+                    UpdateDisplay();
+                    AnalysisResult = "Image Loaded Successfully.";
+                }
+                catch (Exception ex)
+                {
+                    AnalysisResult = "Load Error: " + ex.Message;
+                }
+                finally
+                {
+                    IsBusy = false; // 로딩 종료
+                }
             }
         }
 
+        /*
         // [적용] 버튼을 눌렀을 때
         private void ApplyAlgorithm(object obj)
         {
@@ -436,6 +474,47 @@ namespace IndyVision
             catch (Exception ex)
             {
                 AnalysisResult = "처리 중 에러: " + ex.Message;
+            }
+        }
+        */
+
+        // [변경] 비동기 Apply Algorithm
+        private async void ApplyAlgorithm(object obj)
+        {
+            if (string.IsNullOrEmpty(SelectedAlgorithm)) return;
+            if (IsBusy) return; // 작업 중 중복 실행 방지
+
+            if ((SelectedAlgorithm.Contains("GMF") || SelectedAlgorithm.Contains("TM")) && _cvServices.IsModelDefinitionMode)
+            {
+                _cvServices.PreviewModel(CurrentParameters);
+                UpdateDisplay();
+                return;
+            }
+
+            try
+            {
+                IsBusy = true;
+                AnalysisResult = "Processing...";
+
+                // 비동기 처리 호출
+                string result = await _cvServices.ProcessImageAsync(SelectedAlgorithm, CurrentParameters);
+
+                if (result == "This Image is Gray Image.")
+                {
+                    MessageBox.Show("Gray 영상입니다.", "Gray Image", MessageBoxButton.OK);
+                }
+
+                AnalysisResult = result;
+                ShowOriginal = false;
+                UpdateDisplay();
+            }
+            catch (Exception ex)
+            {
+                AnalysisResult = "처리 중 에러: " + ex.Message;
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 

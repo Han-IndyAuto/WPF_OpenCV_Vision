@@ -1,6 +1,21 @@
 # 📄 WPF OpenCV 라이브러리를 이용한 비전프로그램 개발
 ---
 
+## 📅 2025년 12월 04일
+**작성자:** indy  
+**검토자:** indy
+
+### 1. 개요
+- WPF 기반 OpenCV 라이브러리를 이용하여 영상처리 프로그램 개발 진행
+
+### 2. 진행 내용
+- 이미지 로드 후 ROI 사각형을 그리고 이것을 취소하기 위해 지우기 메뉴를 실행했을 때 지워지지 않는 문제 수정. (Menu_Clear_Click 함수 수정.)
+	MainWindow.XAML 에 Rectangle Style 추가.
+- Roi 사각형에 리사이즈 가능한 Picker/Handle 로직 추가.
+	MainWindow.XAML 에 Rectangle Style 리소스 추가 및 Picker 사각형 코드 추가.(꼭지점, 사각형 각선의 중앙)
+- ROI 사각형이 그려진 상태에서 마우스 포인터를 ROI 사각형 안에 위치한 상태에서 마우스 왼쪽 누른 상태로 드래그 시 ROI 사각형을 이동할 수 있도록 수정.
+
+
 ## 📅 2025년 12월 03일
 **작성자:** indy  
 **검토자:** indy

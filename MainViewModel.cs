@@ -138,11 +138,11 @@ namespace IndyVision
         public AlgorithmParamsBase CurrentParameters
         {
             get => _currentParameters;
-            //set { _currentParameters = value; OnPropertyChanged(); }  // 원본
-
             // 수정: 파라미터 변경 시 이벤트 연결/해제 로직 추가
             set
             {
+                if(_currentParameters == value) return;
+
                 // 기존 파라미터가 있다면 이벤트 연결 해제 (메모리 누수 방지)
                 if (_currentParameters != null)
                     _currentParameters.PropertyChanged -= OnParameterChanged;
@@ -151,9 +151,9 @@ namespace IndyVision
 
                 // 새 파라미터에 이벤트 연결
                 if (_currentParameters != null)
-                    _currentParameters.PropertyChanged += OnParameterChanged;
+                    _currentParameters.PropertyChanged += OnParameterChanged;   // 내부로직(ViewModel)을 위해 사용. (값이 변하면 알로리즘을 다시 돌리는 용도)
 
-                OnPropertyChanged();
+                OnPropertyChanged();    // 화면 (View)를 위해 사용. (객체가 바꿔었으니 화면을 다시 그려라)
             }
         }
 

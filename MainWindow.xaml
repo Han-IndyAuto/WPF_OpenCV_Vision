@@ -83,6 +83,16 @@
     
     <Window.Resources>
 
+        <!-- [추가] 리사이즈 핸들(Picker) 스타일 -->
+        <Style x:Key="ResizeHandleStyle" TargetType="Rectangle">
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="Height" Value="10"/>
+            <Setter Property="Fill" Value="White"/>
+            <Setter Property="Stroke" Value="Black"/>
+            <Setter Property="StrokeThickness" Value="1"/>
+            <Setter Property="Visibility" Value="Collapsed"/>
+        </Style>
+
         <!-- 버튼 스타일 (마우스 오버 효과 등) -->
         <Style x:Key="CaptionButtonStyle" TargetType="Button">
             <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
@@ -682,6 +692,27 @@
                                 </ContextMenu>
                             </Rectangle.ContextMenu>
                         </Rectangle>
+
+                        <!-- [추가] 리사이즈 핸들 (Top-Left, Top-Right, Bottom-Left, Bottom-Right) -->
+                        <!-- MouseLeftButtonDown 이벤트를 C# 코드에서 연결하여 사용 -->
+                        <Rectangle x:Name="Handle_TL" Style="{StaticResource ResizeHandleStyle}"
+                                   Cursor="SizeNWSE" MouseLeftButtonDown="ResizeHandle_MouseDown"/>
+                        <Rectangle x:Name="Handle_TR" Style="{StaticResource ResizeHandleStyle}"
+                                   Cursor="SizeNESW" MouseLeftButtonDown="ResizeHandle_MouseDown"/>
+                        <Rectangle x:Name="Handle_BL" Style="{StaticResource ResizeHandleStyle}"
+                                   Cursor="SizeNESW" MouseLeftButtonDown="ResizeHandle_MouseDown"/>
+                        <Rectangle x:Name="Handle_BR" Style="{StaticResource ResizeHandleStyle}"
+                                   Cursor="SizeNWSE" MouseLeftButtonDown="ResizeHandle_MouseDown"/>
+
+                        <!-- [추가] 변 중앙 핸들 (상, 하, 좌, 우) -->
+                        <Rectangle x:Name="Handle_Top"    Style="{StaticResource ResizeHandleStyle}" 
+                                   Cursor="SizeNS" MouseLeftButtonDown="ResizeHandle_MouseDown"/>
+                        <Rectangle x:Name="Handle_Bottom" Style="{StaticResource ResizeHandleStyle}" 
+                                   Cursor="SizeNS" MouseLeftButtonDown="ResizeHandle_MouseDown"/>
+                        <Rectangle x:Name="Handle_Left"   Style="{StaticResource ResizeHandleStyle}" 
+                                   Cursor="SizeWE" MouseLeftButtonDown="ResizeHandle_MouseDown"/>
+                        <Rectangle x:Name="Handle_Right"  Style="{StaticResource ResizeHandleStyle}" 
+                                   Cursor="SizeWE" MouseLeftButtonDown="ResizeHandle_MouseDown"/>
 
                     </Canvas>
                 </Border>

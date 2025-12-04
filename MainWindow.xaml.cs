@@ -28,6 +28,20 @@ namespace IndyVision
         Rectangle
     }
 
+    // 리사이즈 방향 정의
+    public enum ResizeDirection
+    {
+        None,
+        TopLeft,
+        TopRight,
+        BottomLeft,
+        BottomRight,
+        Top,    // 상
+        Bottom, // 하
+        Left,   // 좌
+        Right   // 우
+    }
+
     /// <summary>
     /// MainWindow.xaml에 대한 상호 작용 논리
     /// </summary>
@@ -43,10 +57,21 @@ namespace IndyVision
         private Point _roiStartPoint;       // 이미지 기준 좌표: ROI 사각형을 그리기 시작한 점 (클릭한 곳)
         private Rect _currentRoiRect;       // 최종적으로 계산된 ROI 영역 (X, Y, W, H)
 
+        // ROI Resize 관련 변수
+        private bool _isResizing = false;
+        private ResizeDirection _resizeDirection = ResizeDirection.None;
+
+        // ROI 사각형 이동 상태관련 변수
+        private bool _isMovingRoi = false;
+        // WPF에서 방향과 크기를 가진 물리량을 표현하기위해 사용하는 구조체.
+        // ROI 사각형을 마우스로 드래그해서 이동시킬 때, "마우스가 움직인 만큼 사각형도 똑같이 움직여야" 합니다.
+        private Vector _moveOffset;         // 클릭한 지점과 사각형 좌상단 사이의 거리(오차)를 저장.
+
         // 그리기 관련 변수
         private DrawingMode _currentDrawMode = DrawingMode.None;
         private Point _drawStartPoint;      // 그리기 시작점 (이미지 좌표)
         private Shape _tempShape;           // 그리기 도중 보여줄 임시 도형.
+
 
         public MainWindow()
         {
@@ -233,11 +258,126 @@ namespace IndyVision
             // (이 수식은 줌 기능의 표준 공식입니다)
             imgTranslate.X = p.X - (p.X - imgTranslate.X) * zoom;
             imgTranslate.Y = p.Y - (p.Y - imgTranslate.Y) * zoom;
+
+            // 줌 상태가 변하면 ROI 핸들 위치도 갱신
+            if (RoiRect.Visibility == Visibility.Visible)
+            {
+                UpdateRoiVisual(new Point(_currentRoiRect.X, _currentRoiRect.Y),
+                                new Point(_currentRoiRect.X + _currentRoiRect.Width, _currentRoiRect.Y + _currentRoiRect.Height));
+            }
         }
 
         private void ZoomBorder_MouseMove(object sender, MouseEventArgs e)
         {
 
+            // ROI 사각형에 대한 이동 처리
+            if(_isMovingRoi && ImgView.Source != null)
+            {
+                var bitmap = ImgView.Source as BitmapSource;
+                Point currentPos = e.GetPosition(ImgView);
+
+                // _moveOffset 는 ZoomBorder_MouseDown 메서드에서 저장됨.
+                double newX = currentPos.X - _moveOffset.X;
+                double newY = currentPos.Y - _moveOffset.Y;
+                double w = _currentRoiRect.Width;
+                double h = _currentRoiRect.Height;
+
+                // 이미지 영역 밖으로 나가지 않도록 제한
+                if (newX < 0) newX = 0;
+                if (newY < 0) newY = 0;
+                if (newX + w > bitmap.PixelWidth) newX = bitmap.PixelWidth - w;
+                if (newY + h > bitmap.PixelHeight) newY = bitmap.PixelHeight - h;
+
+                // 이동된 위치로 업데이트
+                UpdateRoiVisual(new Point(newX, newY), new Point(newX + w, newY + h));
+                return;
+            }
+
+            // Resize 중 일때
+            if(_isResizing && ImgView.Source != null)
+            {
+                var bitmap = ImgView.Source as BitmapSource;
+
+                Point currentPos = e.GetPosition(ImgView);
+
+                // 이미지 범위 제한
+                if (currentPos.X < 0) currentPos.X = 0;
+                if(currentPos.Y < 0) currentPos.Y = 0;
+                if(currentPos.X > bitmap.PixelWidth) currentPos.X = bitmap.PixelWidth;
+                if(currentPos.Y > bitmap.PixelHeight) currentPos.Y = bitmap.PixelHeight;
+
+                double newX = _currentRoiRect.X;
+                double newY = _currentRoiRect.Y;
+                double newW = _currentRoiRect.Width;
+                double newH = _currentRoiRect.Height;
+
+                // 방향에 따른 좌표 계산
+                switch(_resizeDirection)
+                {
+                    case ResizeDirection.TopLeft:
+                        double right = _currentRoiRect.Right;
+                        double bottom = _currentRoiRect.Bottom;
+
+                        newX = Math.Min(currentPos.X, right - 1);
+                        newY = Math.Min(currentPos.Y, bottom - 1);
+                        newW = right - newX;
+                        newH = bottom - newY;
+                        break;
+
+                    case ResizeDirection.TopRight:
+                        double left = _currentRoiRect.Left;
+                        bottom = _currentRoiRect.Bottom;
+                        newY = Math.Min(currentPos.Y, bottom - 1);
+                        newW = Math.Max(currentPos.X - left, 1);
+                        newH = bottom - newY;
+                        break;
+
+                    case ResizeDirection.BottomLeft:
+                        right = _currentRoiRect.Right;
+                        double top = _currentRoiRect.Top;
+                        newX = Math.Min(currentPos.X, right - 1);
+                        newW = right - newX;
+                        newH = Math.Max(currentPos.Y - top, 1);
+                        break;
+
+                    case ResizeDirection.BottomRight:
+                        left = _currentRoiRect.Left;
+                        top = _currentRoiRect.Top;
+                        newW = Math.Max(currentPos.X - left, 1);
+                        newH = Math.Max(currentPos.Y - top, 1);
+                        break;
+
+                    // [추가] 상하좌우 핸들 로직
+                    case ResizeDirection.Top:
+                        // X, Width 고정 / Y, Height 변경
+                        bottom = _currentRoiRect.Bottom;
+                        newY = Math.Min(currentPos.Y, bottom - 1);
+                        newH = bottom - newY;
+                        break;
+
+                    case ResizeDirection.Bottom:
+                        // X, Width 고정 / Height 변경
+                        top = _currentRoiRect.Top;
+                        newH = Math.Max(currentPos.Y - top, 1);
+                        break;
+
+                    case ResizeDirection.Left:
+                        // Y, Height 고정 / X, Width 변경
+                        right = _currentRoiRect.Right;
+                        newX = Math.Min(currentPos.X, right - 1);
+                        newW = right - newX;
+                        break;
+
+                    case ResizeDirection.Right:
+                        // Y, Height 고정 / Width 변경
+                        left = _currentRoiRect.Left;
+                        newW = Math.Max(currentPos.X - left, 1);
+                        break;
+                }
+
+                UpdateRoiVisual(new Point(newX, newY), new Point(newX + newW, newY + newH));
+                return;
+            }
             // ROI 그리기 중일때
             if (_isRoiDrawing)
             {
@@ -294,6 +434,32 @@ namespace IndyVision
                 imgTranslate.X = _origin.X + (v.X - _start.X);
                 imgTranslate.Y = _origin.Y + (v.Y - _start.Y);
             }
+
+
+            // [수정] 마우스 오버 시 커서 변경 로직 (Idle 상태)
+            if (!_isResizing && !_isMovingRoi && !_isRoiDrawing && !_isDragging)
+            {
+                Point currentPos = e.GetPosition(ImgView);
+
+                // ROI가 켜져 있고 마우스가 ROI 안에 있으면 -> 이동 커서
+                if (RoiRect.Visibility == Visibility.Visible && _currentRoiRect.Contains(currentPos))
+                {
+                    Cursor = Cursors.SizeAll;
+                }
+                else
+                {
+                    // 그 외: 현재 모드에 따라 커서 복구
+                    if (_currentDrawMode == DrawingMode.Roi || _currentDrawMode == DrawingMode.Rectangle || _currentDrawMode == DrawingMode.Circle)
+                        Cursor = Cursors.Cross;
+                    else if (_currentDrawMode == DrawingMode.Line)
+                        Cursor = Cursors.Pen;
+                    else
+                        Cursor = Cursors.Arrow;
+                }
+            }
+
+
+
 
             // 마우스 좌표 표시 로직
             // MVVM 패턴에서 View(화면)가 ViewModel(데이터/로직)에 접근하기 위한 전형적인 코드.
@@ -404,7 +570,22 @@ namespace IndyVision
                 Point mousePos = e.GetPosition(ImgView);
                 var bitmap = ImgView.Source as BitmapSource;
 
-                // [수정완료] 기존 vm.SelectedAlgorithm 체크 로직을 제거하고 DrawingMode로 통일
+                // ROI 사각형 이동 시작 로직
+                //  _currentRoiRect.Contains(mousePos) : 현재 마우스 좌표(mousePos)가 Roi 사각형 안에 있는지 검사. 있다면 True.
+                if (RoiRect.Visibility == Visibility.Visible && _currentRoiRect.Contains(mousePos)) 
+                {
+                    _isMovingRoi = true;
+
+                    // 클릭한 지점(mousePos)에서 현재 ROI의 왼쪽 위 좌표(X, Y)를 뺀 '차이 값'을 저장
+                    // 드래그를 시작할 때 **"마우스 포인터가 ROI 상자의 왼쪽 위 모서리로부터 얼마나 떨어져 있는지"**를 기억해두기 위함.
+                    // 이 값이 없다면, 드래그를 시작하자마자 ROI 상자의 왼쪽 위 모서리가 마우스 포인터 위치로 '착' 달라붙어 버리는 현상이 발생합니다.
+                    // 이 오프셋을 적용함으로써 사용자가 상자의 중간을 잡고 드래그해도 자연스럽게 따라오게 됩니다.
+                    _moveOffset = mousePos - new Point(_currentRoiRect.X, _currentRoiRect.Y);
+
+                    ImgCanvas.CaptureMouse();
+                    return;
+                }
+
 
                 // 1. ROI 그리기 모드
                 if (_currentDrawMode == DrawingMode.Roi)
@@ -496,6 +677,21 @@ namespace IndyVision
 
         private void ZoomBorder_MouseUp(object sender, MouseButtonEventArgs e)
         {
+            // 리사이즈 종료 처리
+            if (_isResizing)
+            {
+                _isResizing = false;
+                _resizeDirection = ResizeDirection.None;
+                ImgCanvas.ReleaseMouseCapture();
+            }
+
+            // [추가] 이동 종료 처리
+            if (_isMovingRoi)
+            {
+                _isMovingRoi = false;
+                ImgCanvas.ReleaseMouseCapture();
+            }
+
             // ROI 그리기 종료
             if (_isRoiDrawing)
             {
@@ -586,8 +782,27 @@ namespace IndyVision
 
             RoiRect.Width = screenW;        // 계산된 화면 크기 적용
             RoiRect.Height = screenH;
-            Canvas.SetLeft(RoiRect, screenX);   // 캔버스 위에서의 X 위치
+            Canvas.SetLeft(RoiRect, screenX);   // 캔버스 위에서의 X 위치 "RoiRect야, 너의 부모 캔버스(ImgCanvas) 기준으로 왼쪽에서 screenX만큼 떨어진 곳에 자리 잡아라"
             Canvas.SetTop(RoiRect, screenY);    // 캔버스 위에서의 Y 위치
+
+            // 핸들 위치 업데이트 및 표시
+            UpdateResizeHandle(Handle_TL, screenX, screenY);
+            UpdateResizeHandle(Handle_TR, screenX + screenW, screenY);
+            UpdateResizeHandle(Handle_BL, screenX, screenY + screenH);
+            UpdateResizeHandle(Handle_BR, screenX + screenW, screenY + screenH);
+
+            // 상하좌우 핸들은 각 변의 중앙에 위치
+            UpdateResizeHandle(Handle_Top, screenX + screenW / 2, screenY);
+            UpdateResizeHandle(Handle_Bottom, screenX + screenW / 2, screenY + screenH);
+            UpdateResizeHandle(Handle_Left, screenX, screenY + screenH / 2);
+            UpdateResizeHandle(Handle_Right, screenX + screenW, screenY + screenH / 2);
+        }
+
+        private void UpdateResizeHandle(Rectangle handle, double x, double y)
+        {
+            handle.Visibility = Visibility.Visible;
+            Canvas.SetLeft(handle, x - 5);
+            Canvas.SetTop(handle, y - 5);
         }
 
         private void MenuItem_Crop_Click(object sender, RoutedEventArgs e)
@@ -601,7 +816,11 @@ namespace IndyVision
                 vm.CropImage((int)_currentRoiRect.X, (int)_currentRoiRect.Y, (int)_currentRoiRect.Width, (int)_currentRoiRect.Height);
 
                 // 잘라낸 후 사각형 숨기기
-                RoiRect.Visibility = Visibility.Collapsed;
+                //RoiRect.Visibility = Visibility.Collapsed;
+
+                // Picker 사각형 까지 숨겨야 하므로 수정.
+                HideRoiAndHandles();
+
                 // 뷰 리셋 (선택 사항)
                 FitImageToScreen();     // 잘린 이미지에 맞춰 화면 갱신
             }
@@ -623,7 +842,10 @@ namespace IndyVision
                     vm.SaveRoiImage(dlg.FileName, (int)_currentRoiRect.X, (int)_currentRoiRect.Y, (int)_currentRoiRect.Width, (int)_currentRoiRect.Height);
 
                     // [추가] 저장이 완료되면 사각형을 숨깁니다.
-                    RoiRect.Visibility = Visibility.Collapsed;
+                    //RoiRect.Visibility = Visibility.Collapsed;
+
+                    // Picker 사각형 까지 숨겨야 하므로 수정.
+                    HideRoiAndHandles();
                 }
             }
         }
@@ -648,8 +870,59 @@ namespace IndyVision
 
         private void Menu_Clear_Click(object sender, RoutedEventArgs e)
         {
-            // 그려진 모든 도형 삭제
             OverlayCanvas.Children.Clear();
+            HideRoiAndHandles();
+            _currentRoiRect = new Rect(0, 0, 0, 0);
+            _currentDrawMode = DrawingMode.None;
+            Cursor = Cursors.Arrow;
+
+            /*
+             * Update Version
+            // 그려진 모든 도형 삭제
+            // 오버레이캔버스에 그려진 임시 도형들 삭제
+            OverlayCanvas.Children.Clear();
+
+            // [수정 및 추가] ROI 사각형 숨기기 (삭제가 아니라 숨김 처리)
+            // ROIRect는 OverlayCanvas의 자식이 아니라 형제이므로 별도로 처리 필요.
+            if(RoiRect != null)
+            {
+                RoiRect.Visibility = Visibility.Collapsed;
+                RoiRect.Width = 0;
+                RoiRect.Height = 0;
+            }
+            // [수정 및 추가] ROI 데이터 초기화
+            _currentRoiRect = new Rect(0, 0, 0, 0);
+
+
+            _currentDrawMode = DrawingMode.None;
+            Cursor = Cursors.Arrow;
+            */
+
+            /*
+             * OLD Version
+            OverlayCanvas.Children.Clear();
+            _currentDrawMode = DrawingMode.None;
+            Cursor = Cursors.Arrow;
+            */
+        }
+
+        private void HideRoiAndHandles()
+        {
+            if (RoiRect != null)
+            {
+                RoiRect.Visibility = Visibility.Collapsed;
+                RoiRect.Width = 0;
+                RoiRect.Height = 0;
+            }
+            if (Handle_TL != null) Handle_TL.Visibility = Visibility.Collapsed;
+            if (Handle_TR != null) Handle_TR.Visibility = Visibility.Collapsed;
+            if (Handle_BL != null) Handle_BL.Visibility = Visibility.Collapsed;
+            if (Handle_BR != null) Handle_BR.Visibility = Visibility.Collapsed;
+            if (Handle_Top != null) Handle_Top.Visibility = Visibility.Collapsed;
+            if (Handle_Bottom != null) Handle_Bottom.Visibility = Visibility.Collapsed;
+            if (Handle_Left != null) Handle_Left.Visibility = Visibility.Collapsed;
+            if (Handle_Right != null) Handle_Right.Visibility = Visibility.Collapsed;
+
             _currentDrawMode = DrawingMode.None;
             Cursor = Cursors.Arrow;
         }
@@ -665,6 +938,661 @@ namespace IndyVision
             Cursor = Cursors.Cross;
         }
 
-        
+        // ROI Picker 의 어떤 사각형을 마우스가 잡으면 호출되며, 잡은 사각형이 무엇인지 식별.
+        private void ResizeHandle_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            // sender 는 이벤트를 발생 시킨 객체를 가르키기때문에 사용자가 클릭한 바로 그 핸들 Rectangle 객체이며,
+            // object 타입이니까 그것을 Rectangle 객체로 형변환하여 rect 변수에 넣는다.
+            var rect = sender as Rectangle;
+            if (rect == null) return;
+
+            _isResizing = true;
+
+            // 어떤 핸들인지 식별
+            if (rect == Handle_TL) _resizeDirection = ResizeDirection.TopLeft;
+            else if(rect == Handle_TR) _resizeDirection = ResizeDirection.TopRight;
+            else if(rect == Handle_BL) _resizeDirection = ResizeDirection.BottomLeft;
+            else if(rect == Handle_BR) _resizeDirection = ResizeDirection.BottomRight;
+            else if (rect == Handle_Top) _resizeDirection = ResizeDirection.Top;
+            else if (rect == Handle_Bottom) _resizeDirection = ResizeDirection.Bottom;
+            else if (rect == Handle_Left) _resizeDirection = ResizeDirection.Left;
+            else if (rect == Handle_Right) _resizeDirection = ResizeDirection.Right;
+
+            // 마우스 드래그 동작을 끊김 없이 안정적으로 처리하기 위해 사용.
+            // 마우스가 캔버스 밖으로 나가도 놓치지 않아야 하며, CaptureMouse() 함수를 사용하지 않으면, 마우스가 캔버스 밖으로 나가는 순간
+            // MouseMove 이벤트가 더 이상 ImgCanvas로 전달 되지 않음. 드래그가 끊어 지거나, 마우스를 땠는데로 여전히 드래그 중으로 착각하는 버그가 발생.
+            // CaptureMouse()를 호출하면 **"지금부터 마우스가 화면 어디에 있든, 모든 마우스 이벤트는 나(ImgCanvas)한테만 보내라!"**라고 시스템에 명령
+            ImgCanvas.CaptureMouse();
+
+            // WPF의 이벤트 라우팅을 중단 시키기 위해 사용.
+            // 이벤트 전파 방지(Bubbling 방지): WPF의 마우스 이벤트(예: MouseDown)는 기본적으로 클릭된 요소(여기서는 리사이즈 핸들 사각형)에서
+            // 시작하여 부모 요소(부모 캔버스, 줌 보더 등)로 계속 전달(Bubbling)됩니다.
+            // 만약 이 구문이 없다면, 리사이즈 핸들을 클릭했을 때 그 클릭 이벤트가 뒤에 있는
+            // ZoomBorder나 ImgView로도 전달되어 이미지 이동(Pan)이나 ROI 그리기 로직이 동시에 실행될 수 있습니다.
+            // "이 마우스 클릭은 '리사이즈 작업'을 위해 내가 처리했으니, 부모 요소나 다른 컨트롤들은 이 클릭에 대해 신경 쓰지 마라"고 시스템에 알리는 역할을 합니다.
+            e.Handled = true;
+        }
     }
 }
+
+/**************** Gemini Code Start *************************************************************************
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+using System.Windows.Threading;
+
+namespace IndyVision
+{
+    public enum DrawingMode
+    {
+        None,
+        Roi,
+        Line,
+        Circle,
+        Rectangle
+    }
+
+    public enum ResizeDirection
+    {
+        None,
+        TopLeft,
+        TopRight,
+        BottomLeft,
+        BottomRight,
+        Top,    
+        Bottom, 
+        Left,   
+        Right
+        // Move 제거됨 (별도 로직으로 분리)
+    }
+
+    public partial class MainWindow : Window
+    {
+        private Point _origin;
+        private Point _start;
+        private bool _isDragging = false;
+
+        private bool _isRoiDrawing = false;
+        private Point _roiStartPoint;
+        private Rect _currentRoiRect;
+
+        private bool _isResizing = false;
+        private ResizeDirection _resizeDirection = ResizeDirection.None;
+        
+        // [수정] 이동 상태를 위한 별도 변수
+        private bool _isMovingRoi = false;
+        private Vector _moveOffset; 
+
+        private DrawingMode _currentDrawMode = DrawingMode.None;
+        private Point _drawStartPoint;
+        private Shape _tempShape;
+
+        public MainWindow()
+        {
+            InitializeComponent();
+        }
+
+        private void Minimize_Click(object sender, RoutedEventArgs e) => this.WindowState = WindowState.Minimized;
+
+        private void Maximize_Click(object sender, RoutedEventArgs e)
+        {
+            if (this.WindowState == WindowState.Maximized) this.WindowState = WindowState.Normal;
+            else this.WindowState = WindowState.Maximized;
+        }
+
+        private void Close_Click(object sender, RoutedEventArgs e) => this.Close();
+
+        protected override void OnStateChanged(EventArgs e)
+        {
+            base.OnStateChanged(e);
+            if (MaximizeButton == null) return;
+
+            if (this.WindowState == WindowState.Maximized)
+            {
+                MaximizeButton.Content = "❐";
+                MaximizeButton.ToolTip = "Restore Down";
+            }
+            else
+            {
+                MaximizeButton.Content = "□";
+                MaximizeButton.ToolTip = "Maximize";
+            }
+        }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            var vm = this.DataContext as MainViewModel;
+            vm?.Cleanup();
+        }
+
+        private void ImgView_SizeChanged(object sender, SizeChangedEventArgs e) => Dispatcher.InvokeAsync(() => FitImageToScreen(), DispatcherPriority.ContextIdle);
+        private void ZoomBorder_SizeChanged(object sender, SizeChangedEventArgs e) { if (ImgView.Source != null) FitImageToScreen(); }
+        private void ZoomBorder_Loaded(object sender, RoutedEventArgs e) => Dispatcher.InvokeAsync(() => FitImageToScreen(), DispatcherPriority.ContextIdle);
+
+        public void FitImageToScreen()
+        {
+            ZoomBorder.UpdateLayout();
+            ImgView.UpdateLayout();
+
+            if (ImgView.Source == null || ZoomBorder.ActualWidth == 0 || ZoomBorder.ActualHeight == 0) return;
+
+            var imageSource = ImgView.Source as BitmapSource;
+            if (imageSource == null || imageSource.Width == 0 || imageSource.Height == 0) return;
+
+            imgScale.ScaleX = 1.0;
+            imgScale.ScaleY = 1.0;
+            imgTranslate.X = 0;
+            imgTranslate.Y = 0;
+
+            double scaleX = ZoomBorder.ActualWidth / imageSource.Width;
+            double scaleY = ZoomBorder.ActualHeight / imageSource.Height;
+            double scale = Math.Min(scaleX, scaleY);
+
+            if (scale > 1.0) scale = 1.0;
+
+            imgScale.ScaleX = scale * 0.95;
+            imgScale.ScaleY = scale * 0.95;
+
+            double finalWidth = imageSource.Width * imgScale.ScaleX;
+            double finalHeight = imageSource.Height * imgScale.ScaleY;
+
+            imgTranslate.X = (ZoomBorder.ActualWidth - finalWidth) / 2;
+            imgTranslate.Y = (ZoomBorder.ActualHeight - finalHeight) / 2;
+        }
+
+        private void ZoomBorder_MouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (ImgView.Source == null) return;
+            Point p = e.GetPosition(ZoomBorder);
+            double zoom = e.Delta > 0 ? 1.2 : (1.0 / 1.2);
+
+            imgScale.ScaleX *= zoom;
+            imgScale.ScaleY *= zoom;
+
+            imgTranslate.X = p.X - (p.X - imgTranslate.X) * zoom;
+            imgTranslate.Y = p.Y - (p.Y - imgTranslate.Y) * zoom;
+            
+            if (RoiRect.Visibility == Visibility.Visible)
+            {
+                UpdateRoiVisual(new Point(_currentRoiRect.X, _currentRoiRect.Y), 
+                                new Point(_currentRoiRect.X + _currentRoiRect.Width, _currentRoiRect.Y + _currentRoiRect.Height));
+            }
+        }
+
+        private void ResizeHandle_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            var rect = sender as Rectangle;
+            if (rect == null) return;
+
+            _isResizing = true;
+
+            if (rect == Handle_TL) _resizeDirection = ResizeDirection.TopLeft;
+            else if (rect == Handle_TR) _resizeDirection = ResizeDirection.TopRight;
+            else if (rect == Handle_BL) _resizeDirection = ResizeDirection.BottomLeft;
+            else if (rect == Handle_BR) _resizeDirection = ResizeDirection.BottomRight;
+            else if (rect == Handle_Top) _resizeDirection = ResizeDirection.Top;
+            else if (rect == Handle_Bottom) _resizeDirection = ResizeDirection.Bottom;
+            else if (rect == Handle_Left) _resizeDirection = ResizeDirection.Left;
+            else if (rect == Handle_Right) _resizeDirection = ResizeDirection.Right;
+
+            ImgCanvas.CaptureMouse();
+            e.Handled = true; 
+        }
+
+        private void ZoomBorder_MouseMove(object sender, MouseEventArgs e)
+        {
+            Point currentPos = e.GetPosition(ImgView);
+
+            // [수정] 1-1. ROI 이동 처리 (별도 분리)
+            if (_isMovingRoi && ImgView.Source != null)
+            {
+                var bitmap = ImgView.Source as BitmapSource;
+
+                double newX = currentPos.X - _moveOffset.X;
+                double newY = currentPos.Y - _moveOffset.Y;
+                double w = _currentRoiRect.Width;
+                double h = _currentRoiRect.Height;
+
+                // 이미지 영역 밖으로 나가지 않도록 제한
+                if (newX < 0) newX = 0;
+                if (newY < 0) newY = 0;
+                if (newX + w > bitmap.PixelWidth) newX = bitmap.PixelWidth - w;
+                if (newY + h > bitmap.PixelHeight) newY = bitmap.PixelHeight - h;
+
+                // 이동된 위치로 업데이트
+                UpdateRoiVisual(new Point(newX, newY), new Point(newX + w, newY + h));
+                return;
+            }
+
+            // 1-2. 리사이즈 처리
+            if (_isResizing && ImgView.Source != null)
+            {
+                var bitmap = ImgView.Source as BitmapSource;
+                
+                // 마우스가 이미지 밖으로 나가지 않게 Clamp
+                if (currentPos.X < 0) currentPos.X = 0;
+                if (currentPos.Y < 0) currentPos.Y = 0;
+                if (currentPos.X > bitmap.PixelWidth) currentPos.X = bitmap.PixelWidth;
+                if (currentPos.Y > bitmap.PixelHeight) currentPos.Y = bitmap.PixelHeight;
+
+                double newX = _currentRoiRect.X;
+                double newY = _currentRoiRect.Y;
+                double newW = _currentRoiRect.Width;
+                double newH = _currentRoiRect.Height;
+
+                switch (_resizeDirection)
+                {
+                    case ResizeDirection.TopLeft:
+                        double right = _currentRoiRect.Right;
+                        double bottom = _currentRoiRect.Bottom;
+                        newX = Math.Min(currentPos.X, right - 1); 
+                        newY = Math.Min(currentPos.Y, bottom - 1);
+                        newW = right - newX;
+                        newH = bottom - newY;
+                        break;
+
+                    case ResizeDirection.TopRight:
+                        double left = _currentRoiRect.Left;
+                        bottom = _currentRoiRect.Bottom;
+                        newY = Math.Min(currentPos.Y, bottom - 1);
+                        newW = Math.Max(currentPos.X - left, 1);
+                        newH = bottom - newY;
+                        break;
+
+                    case ResizeDirection.BottomLeft:
+                        right = _currentRoiRect.Right;
+                        double top = _currentRoiRect.Top;
+                        newX = Math.Min(currentPos.X, right - 1);
+                        newW = right - newX;
+                        newH = Math.Max(currentPos.Y - top, 1);
+                        break;
+
+                    case ResizeDirection.BottomRight:
+                        left = _currentRoiRect.Left;
+                        top = _currentRoiRect.Top;
+                        newW = Math.Max(currentPos.X - left, 1);
+                        newH = Math.Max(currentPos.Y - top, 1);
+                        break;
+
+                    case ResizeDirection.Top:
+                        bottom = _currentRoiRect.Bottom;
+                        newY = Math.Min(currentPos.Y, bottom - 1);
+                        newH = bottom - newY;
+                        break;
+
+                    case ResizeDirection.Bottom:
+                        top = _currentRoiRect.Top;
+                        newH = Math.Max(currentPos.Y - top, 1);
+                        break;
+
+                    case ResizeDirection.Left:
+                        right = _currentRoiRect.Right;
+                        newX = Math.Min(currentPos.X, right - 1);
+                        newW = right - newX;
+                        break;
+
+                    case ResizeDirection.Right:
+                        left = _currentRoiRect.Left;
+                        newW = Math.Max(currentPos.X - left, 1);
+                        break;
+                }
+
+                UpdateRoiVisual(new Point(newX, newY), new Point(newX + newW, newY + newH));
+                return;
+            }
+
+            // 2. ROI 그리기
+            if (_isRoiDrawing)
+            {
+                var bitmap = ImgView.Source as BitmapSource;
+                if (currentPos.X < 0) currentPos.X = 0;
+                if (currentPos.Y < 0) currentPos.Y = 0;
+                if (currentPos.X > bitmap.PixelWidth) currentPos.X = bitmap.PixelWidth;
+                if (currentPos.Y > bitmap.PixelHeight) currentPos.Y = bitmap.PixelHeight;
+
+                UpdateRoiVisual(_roiStartPoint, currentPos);
+            }
+            // 3. 도형 그리기
+            else if (_currentDrawMode != DrawingMode.None && _tempShape != null && e.LeftButton == MouseButtonState.Pressed)
+            {
+                if(_currentDrawMode == DrawingMode.Line)
+                {
+                    var line = _tempShape as Line;
+                    line.X2 = currentPos.X;
+                    line.Y2 = currentPos.Y;
+                }
+                else if(_currentDrawMode == DrawingMode.Circle || _currentDrawMode == DrawingMode.Rectangle)
+                {
+                    double x = Math.Min(_drawStartPoint.X, currentPos.X);
+                    double y = Math.Min(_drawStartPoint.Y, currentPos.Y);
+                    double w = Math.Abs(currentPos.X - _drawStartPoint.X);
+                    double h = Math.Abs(currentPos.Y - _drawStartPoint.Y);
+
+                    Canvas.SetLeft(_tempShape, x);
+                    Canvas.SetTop(_tempShape, y);
+                    _tempShape.Width = w;
+                    _tempShape.Height = h;
+                }
+            }
+            // 4. 이미지 이동 (Pan)
+            else if (_isDragging)
+            {
+                var border = sender as Border;
+                Point v = e.GetPosition(border);
+                imgTranslate.X = _origin.X + (v.X - _start.X);
+                imgTranslate.Y = _origin.Y + (v.Y - _start.Y);
+            }
+
+            // [수정] 마우스 오버 시 커서 변경 로직 (Idle 상태)
+            if (!_isResizing && !_isMovingRoi && !_isRoiDrawing && !_isDragging)
+            {
+                // ROI가 켜져 있고 마우스가 ROI 안에 있으면 -> 이동 커서
+                if (RoiRect.Visibility == Visibility.Visible && _currentRoiRect.Contains(currentPos))
+                {
+                    Cursor = Cursors.SizeAll;
+                }
+                else
+                {
+                    // 그 외: 현재 모드에 따라 커서 복구
+                    if (_currentDrawMode == DrawingMode.Roi || _currentDrawMode == DrawingMode.Rectangle || _currentDrawMode == DrawingMode.Circle)
+                        Cursor = Cursors.Cross;
+                    else if (_currentDrawMode == DrawingMode.Line)
+                        Cursor = Cursors.Pen;
+                    else
+                        Cursor = Cursors.Arrow;
+                }
+            }
+
+            // 좌표 표시
+            var vm = this.DataContext as MainViewModel;
+            if (vm != null && ImgView.Source is BitmapSource bitmapSrc)
+            {
+                int currentX = (int)currentPos.X;
+                int currentY = (int)currentPos.Y;
+
+                if (currentX >= 0 && currentX < bitmapSrc.PixelWidth &&
+                    currentY >= 0 && currentY < bitmapSrc.PixelHeight)
+                {
+                    vm.MouseCoordinationInfo = $"(X: {currentX}, Y: {currentY})";
+                }
+                else
+                {
+                    vm.MouseCoordinationInfo = "(X: 0, Y: 0)";
+                }
+            }
+        }
+
+        private void ZoomBorder_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (ImgView.Source == null) return;
+
+            bool isClickedOnRoi = false;
+            if(RoiRect.Visibility == Visibility.Visible && _currentRoiRect.Width > 0 && _currentRoiRect.Height > 0)
+            {
+                Point mousePt = e.GetPosition(ImgView);
+                if(_currentRoiRect.Contains(mousePt))
+                {
+                    isClickedOnRoi = true;
+                }
+            }
+
+            if (isClickedOnRoi)
+            {
+                return;
+            }
+            else
+            {
+                ContextMenu menu = this.FindResource("DrawingContextMenu") as ContextMenu;
+                if (menu != null)
+                {
+                    menu.PlacementTarget = sender as UIElement;
+                    menu.IsOpen = true;
+                }
+                e.Handled = true;
+            }
+        }
+
+        private void ZoomBorder_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Left && ImgView.Source != null)
+            {
+                Point mousePos = e.GetPosition(ImgView);
+                var bitmap = ImgView.Source as BitmapSource;
+
+                // [수정] ROI 이동 시작 로직 (_isMovingRoi 변수 사용)
+                if (RoiRect.Visibility == Visibility.Visible && _currentRoiRect.Contains(mousePos))
+                {
+                    _isMovingRoi = true; 
+                    
+                    // 클릭한 점과 사각형 좌상단 사이의 거리 저장
+                    _moveOffset = mousePos - new Point(_currentRoiRect.X, _currentRoiRect.Y);
+                    
+                    ImgCanvas.CaptureMouse();
+                    return; 
+                }
+
+                if (_currentDrawMode == DrawingMode.Roi)
+                {
+                    if (mousePos.X >= 0 && mousePos.X < bitmap.PixelWidth && mousePos.Y >= 0 && mousePos.Y < bitmap.PixelHeight)
+                    {
+                        _isRoiDrawing = true;
+                        _roiStartPoint = mousePos;
+
+                        RoiRect.Visibility = Visibility.Visible;
+                        RoiRect.Width = 0;
+                        RoiRect.Height = 0;
+                        UpdateRoiVisual(mousePos, mousePos);
+                        ImgCanvas.CaptureMouse();
+                    }
+                }
+                else if (_currentDrawMode != DrawingMode.None)
+                {
+                    _drawStartPoint = mousePos;
+
+                    if (_currentDrawMode == DrawingMode.Line)
+                    {
+                        _tempShape = new Line { Stroke = Brushes.Yellow, StrokeThickness = 2, X1 = _drawStartPoint.X, Y1 = _drawStartPoint.Y, X2 = _drawStartPoint.X, Y2 = _drawStartPoint.Y };
+                    }
+                    else if (_currentDrawMode == DrawingMode.Circle)
+                    {
+                        _tempShape = new Ellipse { Stroke = Brushes.Lime, StrokeThickness = 2, Width = 0, Height = 0 };
+                        Canvas.SetLeft(_tempShape, _drawStartPoint.X); Canvas.SetTop(_tempShape, _drawStartPoint.Y);
+                    }
+                    else if (_currentDrawMode == DrawingMode.Rectangle)
+                    {
+                        _tempShape = new Rectangle { Stroke = Brushes.Cyan, StrokeThickness = 2, Width = 0, Height = 0 };
+                        Canvas.SetLeft(_tempShape, _drawStartPoint.X); Canvas.SetTop(_tempShape, _drawStartPoint.Y);
+                    }
+
+                    if (_tempShape != null)
+                    {
+                        OverlayCanvas.Children.Add(_tempShape);
+                        ZoomBorder.CaptureMouse();
+                    }
+                }
+            }
+            else if (e.ChangedButton == MouseButton.Middle && ImgView.Source != null)
+            {
+                var border = sender as Border;
+                border.CaptureMouse();
+                _start = e.GetPosition(border);
+                _origin = new Point(imgTranslate.X, imgTranslate.Y);
+                _isDragging = true;
+                Cursor = Cursors.SizeAll;
+            }
+        }
+
+        private void ZoomBorder_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            if (_isResizing)
+            {
+                _isResizing = false;
+                _resizeDirection = ResizeDirection.None;
+                ImgCanvas.ReleaseMouseCapture(); 
+            }
+
+            // [추가] 이동 종료 처리
+            if (_isMovingRoi)
+            {
+                _isMovingRoi = false;
+                ImgCanvas.ReleaseMouseCapture();
+            }
+
+            if (_isRoiDrawing)
+            {
+                _isRoiDrawing = false;
+                ImgCanvas.ReleaseMouseCapture();   
+            }
+
+            if(_currentDrawMode != DrawingMode.None && _tempShape != null)
+            {
+                ZoomBorder.ReleaseMouseCapture();
+
+                if(_currentDrawMode == DrawingMode.Line && _tempShape is Line line)
+                {
+                    double dist = Math.Sqrt(Math.Pow(line.X2 - line.X1, 2) + Math.Pow(line.Y2 - line.Y1, 2));
+                    TextBlock tb = new TextBlock
+                    {
+                        Text = $"{dist:F1}px", Foreground = Brushes.Yellow, Background = new SolidColorBrush(Color.FromArgb(128, 0, 0, 0)), 
+                        Padding = new Thickness(2), FontSize = 14, FontWeight = FontWeights.Bold
+                    };
+                    Canvas.SetLeft(tb, line.X2); Canvas.SetTop(tb, line.Y2);
+                    OverlayCanvas.Children.Add(tb);
+                }
+                _currentDrawMode = DrawingMode.None;
+                _tempShape = null;
+                Cursor = Cursors.Arrow;
+            }
+
+            if (_isDragging && e.ChangedButton == MouseButton.Middle)
+            {
+                var border = sender as Border;
+                border.ReleaseMouseCapture();   
+                _isDragging = false;
+                Cursor = Cursors.Arrow;         
+            }
+        }
+
+        private void UpdateRoiVisual(Point start, Point end)
+        {
+            double x = Math.Min(start.X, end.X);
+            double y = Math.Min(start.Y, end.Y);
+            double w = Math.Abs(end.X - start.X);
+            double h = Math.Abs(end.Y - start.Y);
+
+            _currentRoiRect = new Rect(x, y, w, h);
+
+            double screenX = x * imgScale.ScaleX + imgTranslate.X;
+            double screenY = y * imgScale.ScaleY + imgTranslate.Y;
+            double screenW = w * imgScale.ScaleX;
+            double screenH = h * imgScale.ScaleY;
+
+            RoiRect.RenderTransform = null; 
+            RoiRect.Width = screenW;        
+            RoiRect.Height = screenH;
+            Canvas.SetLeft(RoiRect, screenX);   
+            Canvas.SetTop(RoiRect, screenY);
+
+            UpdateResizeHandle(Handle_TL, screenX, screenY);
+            UpdateResizeHandle(Handle_TR, screenX + screenW, screenY);
+            UpdateResizeHandle(Handle_BL, screenX, screenY + screenH);
+            UpdateResizeHandle(Handle_BR, screenX + screenW, screenY + screenH);
+
+            UpdateResizeHandle(Handle_Top, screenX + screenW / 2, screenY);
+            UpdateResizeHandle(Handle_Bottom, screenX + screenW / 2, screenY + screenH);
+            UpdateResizeHandle(Handle_Left, screenX, screenY + screenH / 2);
+            UpdateResizeHandle(Handle_Right, screenX + screenW, screenY + screenH / 2);
+        }
+
+        private void UpdateResizeHandle(Rectangle handle, double x, double y)
+        {
+            handle.Visibility = Visibility.Visible;
+            Canvas.SetLeft(handle, x - 5);
+            Canvas.SetTop(handle, y - 5);
+        }
+
+        private void MenuItem_Crop_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentRoiRect.Width <= 0 || _currentRoiRect.Height <= 0) return;
+
+            var vm = this.DataContext as MainViewModel;
+            if (vm != null)
+            {
+                vm.CropImage((int)_currentRoiRect.X, (int)_currentRoiRect.Y, (int)_currentRoiRect.Width, (int)_currentRoiRect.Height);
+                HideRoiAndHandles();
+                FitImageToScreen();     
+            }
+        }
+
+        private void MenuItem_Save_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentRoiRect.Width <= 0 || _currentRoiRect.Height <= 0) return;
+
+            var vm = this.DataContext as MainViewModel;
+            if (vm != null)
+            {
+                Microsoft.Win32.SaveFileDialog dlg = new Microsoft.Win32.SaveFileDialog();
+                dlg.Filter = "Bitmap (*.bmp)|*.bmp|JPEG (*.jpg)|*.jpg|PNG (*.png)|*.png";
+                dlg.FileName = "ROI_Image";
+
+                if (dlg.ShowDialog() == true)
+                {
+                    vm.SaveRoiImage(dlg.FileName, (int)_currentRoiRect.X, (int)_currentRoiRect.Y, (int)_currentRoiRect.Width, (int)_currentRoiRect.Height);
+                    HideRoiAndHandles();
+                }
+            }
+        }
+
+        private void Menu_DrawLine_Click(object sender, RoutedEventArgs e) { _currentDrawMode = DrawingMode.Line; Cursor = Cursors.Pen; }
+        private void Menu_DrawCircle_Click(object sender, RoutedEventArgs e) { _currentDrawMode = DrawingMode.Circle; Cursor = Cursors.Cross; }
+        private void Menu_DrawRect_Click(object sender, RoutedEventArgs e) { _currentDrawMode = DrawingMode.Rectangle; Cursor = Cursors.Cross; }
+
+        private void Menu_Clear_Click(object sender, RoutedEventArgs e)
+        {
+            OverlayCanvas.Children.Clear();
+            HideRoiAndHandles();
+            _currentRoiRect = new Rect(0,0,0,0);
+            
+            // Clear 시에는 그리기 모드도 초기화하는 것이 자연스러움
+            // HideRoiAndHandles에서 처리됨
+        }
+
+        private void HideRoiAndHandles()
+        {
+            if (RoiRect != null)
+            {
+                RoiRect.Visibility = Visibility.Collapsed;
+                RoiRect.Width = 0;
+                RoiRect.Height = 0;
+            }
+            if (Handle_TL != null) Handle_TL.Visibility = Visibility.Collapsed;
+            if (Handle_TR != null) Handle_TR.Visibility = Visibility.Collapsed;
+            if (Handle_BL != null) Handle_BL.Visibility = Visibility.Collapsed;
+            if (Handle_BR != null) Handle_BR.Visibility = Visibility.Collapsed;
+            if (Handle_Top != null) Handle_Top.Visibility = Visibility.Collapsed;
+            if (Handle_Bottom != null) Handle_Bottom.Visibility = Visibility.Collapsed;
+            if (Handle_Left != null) Handle_Left.Visibility = Visibility.Collapsed;
+            if (Handle_Right != null) Handle_Right.Visibility = Visibility.Collapsed;
+
+            _currentDrawMode = DrawingMode.None;
+            Cursor = Cursors.Arrow;
+        }
+
+        private void Menu_Fit_Click(object sender, RoutedEventArgs e) => FitImageToScreen();
+        private void Menu_DrawRoi_Click(object sender, RoutedEventArgs e) { _currentDrawMode = DrawingMode.Roi; Cursor = Cursors.Cross; }
+    }
+}
+**************** Gemini Code End *************************************************************************/

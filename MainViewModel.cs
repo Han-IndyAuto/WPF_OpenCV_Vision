@@ -79,7 +79,13 @@ namespace IndyVision
         public string AnalysisResult
         {
             get => _analysisResult;
-            set { _analysisResult = value; OnPropertyChanged(); }
+            set 
+            { 
+                if(_analysisResult == value) return;
+
+                _analysisResult = value; 
+                OnPropertyChanged(); 
+            }
         }
 
         // _showOriginal: "원본 보기" 체크박스 상태 (True/False)
@@ -90,12 +96,14 @@ namespace IndyVision
             get => _showOriginal;
             set
             {
+                if(_showOriginal == value) return;
+
                 _showOriginal = value;
                 // 체크박스 상태가 바뀜을 알림
                 OnPropertyChanged();
 
                 // 체크 상태가 바뀌면 이미지를 다시 불러옴 (원본 vs 결과)
-                // [중요] 체크박스를 껐다 켰다 할 때마다 즉시 이미지를 바꿔 끼워줍니다.
+                // 체크박스를 껐다 켰다 할 때마다 즉시 이미지를 바꿔 끼워줍니다.
                 // (체크됨: 원본 보여줘 / 체크해제: 결과 보여줘)
                 UpdateDisplay();
             }
@@ -103,7 +111,8 @@ namespace IndyVision
 
         // 콤보박스에 연결될 리스트
         // ObservableCollection: UI와 대화하는 똑똑한 리스트
-        // 일반 List<string>: 데이터를 담을 수는 있지만, 데이터가 추가되거나 삭제되어도 화면(ListBox, ComboBox)은 그 사실을 모릅니다. 그래서 화면이 갱신되지 않습니다.
+        // 일반 List<string>: 데이터를 담을 수는 있지만, 데이터가 추가되거나 삭제되어도 화면(ListBox, ComboBox)은 그 사실을 모릅니다.
+        // 그래서 화면이 갱신되지 않습니다.
         // ObservableCollection<string>: 데이터가 추가(Add)되거나 삭제(Remove)되면, **"나 내용물 바뀌었어! 화면 다시 그려!"**라고 UI에게 즉시 알림을 보냅니다.
         // AlgorithmList: 사용자가 화면에서 보게 될 **"알고리즘 메뉴 목록"**을 담고 있는 그릇
         public ObservableCollection<string> AlgorithmList { get; set; }
@@ -116,6 +125,8 @@ namespace IndyVision
             get => _selectedAlgorithm;
             set
             {
+                if (_selectedAlgorithm == value) return;
+
                 _selectedAlgorithm = value;
                 OnPropertyChanged();
 
@@ -124,13 +135,10 @@ namespace IndyVision
                 // 사용자가 "모폴로지"를 선택하면 -> 모폴로지용 설정(Params)을 만듭니다.
                 // 알고리즘 선택 시 해당 파라미터 객체 생성
                 CreateParametersForAlgorithm(value);
-
-                // 알고리즘을 바꾸면 즉시 한번 실행.
-                //ApplyAlgorithm(null); // 선택 즉시 적용
             }
         }
 
-        // 변수 선언: 부모 타입(AlgorithmParamsBase)으로 선언
+        // 변수 선언: 부모 타입(AlgorithmParamsBase)으로 선언 => 추상화 클래스
         // 현재 선택된 알고리즘의 설정값 객체 (UI의 ContentControl과 바인딩)
         // _currentParameters: 현재 선택된 알고리즘의 설정값(객체)입니다.
         // 이 변수에 무엇이 들어가느냐에 따라 화면 오른쪽 아래 UI(슬라이더/입력창)가 바뀝니다.
@@ -185,17 +193,16 @@ namespace IndyVision
         private void AutoApplyTimer_Tick(object sender, EventArgs e)
         {
             _autoApplyTimer.Stop(); // 타이머 중지
+
+            // System.Threading.Timer를 사용할 때, 타이머가 호출할 수 있는 함수의 형태는 반드시 object 인자를 하나 받아야 함.
+            // 그래서 ApplyAlgorithm(object obj)라고 선언한 것.
+            // 타이머에서 ApplyAlgorithm(null)이라고 호출해도, 함수 내부는 null을 무시하고 화면에 있는 슬라이더 값을 가져다 쓰기 때문에 정상 작동.
+            // ApplyAlgorithm 함수 내부에서 obj 매개변수를 사용하지 않고, UI 컨트롤(슬라이더, 텍스트박스)의 값을 직접 읽어서 사용하기 때문에 동작.
             ApplyAlgorithm(null);   // 실제 알고리즘 적용.
         }
 
         private void OnParameterChanged(object sender, PropertyChangedEventArgs e)
         {
-            // 슬라이더를 움직이면 자동으로 ApplyAlgorithm을 실행합니다.
-            //if (!string.IsNullOrEmpty(SelectedAlgorithm))
-            //{
-            //   ApplyAlgorithm(null);
-            //}
-
             // 바로 실행하지 않고, 타이머를 리셋.
             // 사용자가 슬라이더를 계속 움직이는 중이면 타이머가 계속 0으로 초기화 되어 실행을 미룹니다.
             // 움직임을 멈추면, 타이머가 설정된 시간 뒤에 Tick 이벤트가 발생하여 ApplyAlgorithm이 호출됩니다.
@@ -387,24 +394,17 @@ namespace IndyVision
             // 파일을 선택하고 확인을 눌렀다면
             if (dlg.ShowDialog() == true)
             {
-                /*
-                // 1. MilService에게 파일을 로드하라고 시킵니다.
-                _cvServices.LoadImage(dlg.FileName);
-                // 2. 막 로드했으니 사용자가 원본을 확인하도록 "원본 보기"를 켭니다.
-                ShowOriginal = true; // 로드 직후엔 원본 보여주기
-                // 3. 화면 갱신
-                UpdateDisplay();
-                */
-
                 try
                 {
                     IsBusy = true; // 로딩 시작 알림 (UI 프리징 방지)
                     AnalysisResult = "Loading Image...";
 
+                    // 1. OpenCVService에게 파일을 로드하라고 시킵니다.
                     // 비동기 함수 호출 (await로 기다림, UI 스레드는 자유로움)
                     await _cvServices.LoadImageAsync(dlg.FileName);
-
+                    // 2. 막 로드했으니 사용자가 원본을 확인하도록 "원본 보기"를 켭니다.
                     ShowOriginal = true;
+                    // 3. 화면 갱신
                     UpdateDisplay();
                     AnalysisResult = "Image Loaded Successfully.";
                 }
@@ -418,65 +418,6 @@ namespace IndyVision
                 }
             }
         }
-
-        /*
-        // [적용] 버튼을 눌렀을 때
-        private void ApplyAlgorithm(object obj)
-        {
-            // 알고리즘 선택을 안 했으면 아무것도 안 함
-            if (string.IsNullOrEmpty(SelectedAlgorithm)) return;
-
-            // GMF 모드일때, 슬라이더를 움직이면 검사가 아니라 모델 미리보기를 적용
-            // String.Contain("검색어") 함수는 긴 문장안에 검색어가 포함되어 있는지 물어 보는 함수.
-            if (SelectedAlgorithm.Contains("GMF") && _cvServices.IsModelDefinitionMode)
-            {
-                if (CurrentParameters is GmfParams gmfParams)
-                {
-                    //_cvServices.PreviewGmfModel(gmfParams); // 모델 윤곽선 미리보기
-                    _cvServices.PreviewModel(gmfParams); // 모델 윤곽선 미리보기
-                    UpdateDisplay();
-                    return; // 검사는 하지 않고 리턴
-                }
-            }
-            else if(SelectedAlgorithm.Contains("TM") && _cvServices.IsModelDefinitionMode)
-            {
-                if(CurrentParameters is TemplateMatchParams tmParams)
-                {
-                    //_cvServices.PreviewGmfModel(tmParams);
-                    _cvServices.PreviewModel(tmParams);
-                    UpdateDisplay();
-                    return;
-                }
-            }
-            else if(SelectedAlgorithm.Contains("Gray"))
-            {
-            }
-
-            // 일반 검사 로직 (기존과 동일)
-            try
-            {
-                // [수정] ProcessImage가 결과를 반환하도록 변경하거나, 호출 후 결과를 받아옴
-                string result = _cvServices.ProcessImage(SelectedAlgorithm, CurrentParameters);
-
-                if(result == "This Image is Gray Image.")
-                {
-                    MessageBox.Show("Gray 영상입니다.", "Gray Image", MessageBoxButton.OK);
-                }
-
-
-                AnalysisResult = result;
-
-                // 처리가 끝났으니 결과를 보여주기 위해 "원본 보기"를 끕니다.
-                ShowOriginal = false; // 적용 후엔 결과 보기로 자동 전환
-                                      // 화면 갱신 (결과 이미지가 뜸)
-                UpdateDisplay();
-            }
-            catch (Exception ex)
-            {
-                AnalysisResult = "처리 중 에러: " + ex.Message;
-            }
-        }
-        */
 
         // [변경] 비동기 Apply Algorithm
         private async void ApplyAlgorithm(object obj)

@@ -14,6 +14,7 @@
 - Roi 사각형에 리사이즈 가능한 Picker/Handle 로직 추가.
 	MainWindow.XAML 에 Rectangle Style 리소스 추가 및 Picker 사각형 코드 추가.(꼭지점, 사각형 각선의 중앙)
 - ROI 사각형이 그려진 상태에서 마우스 포인터를 ROI 사각형 안에 위치한 상태에서 마우스 왼쪽 누른 상태로 드래그 시 ROI 사각형을 이동할 수 있도록 수정.
+- CodeDebug 진행.
 
 
 ## 📅 2025년 12월 03일
